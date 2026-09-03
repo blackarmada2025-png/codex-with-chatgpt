@@ -16,6 +16,7 @@ import { Logger, nullLogger } from "../logger/index.js";
 import { DEFAULT_HOST, DEFAULT_PORT } from "../config/paths.js";
 import { SERVICE_NAME, VERSION } from "../version.js";
 import { writeRuntimeState, clearRuntimeState, type RuntimeState } from "./runtime.js";
+import { GatewayWorkspaceRegistry, type GatewayWorkspaceEntry } from "../workspace/registry.js";
 
 function tunnelForWorkspace(workspaceId: string, logger: Logger): TunnelProvider {
   const binding = namedTunnelBinding(readTunnelState(workspaceId));
@@ -40,6 +41,11 @@ export interface BridgeOptions {
   authStoreFile?: string;
   pairingTtlMs?: number;
   accessTokenTtlMs?: number;
+  /**
+   * Opt-in multi-workspace gateway mode. The running bridge's workspace stays
+   * the OAuth/tunnel identity; MCP tools must select one of these roots.
+   */
+  gatewayWorkspaceEntries?: GatewayWorkspaceEntry[];
 }
 
 export interface Bridge {
@@ -82,6 +88,9 @@ function listen(app: express.Express, host: string, preferredPort: number): Prom
 export async function startBridge(opts: BridgeOptions): Promise<Bridge> {
   const logger = opts.logger ?? nullLogger;
   const workspace = new Workspace(opts.workspaceRoot);
+  const gatewayRegistry = opts.gatewayWorkspaceEntries
+    ? new GatewayWorkspaceRegistry(workspace.root, opts.gatewayWorkspaceEntries)
+    : undefined;
   const host = opts.host ?? DEFAULT_HOST;
   if (host !== "127.0.0.1" && host !== "::1" && host !== "localhost") {
     throw new Error("The bridge only binds to loopback addresses. Public exposure goes through the tunnel.");
@@ -125,7 +134,10 @@ export async function startBridge(opts: BridgeOptions): Promise<Bridge> {
 
   // ---- MCP endpoint (bearer-protected) --------------------------------------
 
-  const mcpHandler = createMcpHttpHandler(() => createMcpServer({ workspace, logger }), logger);
+  const mcpHandler = createMcpHttpHandler(
+    () => createMcpServer({ workspace, logger, gatewayRegistry }),
+    logger
+  );
   app.all(
     "/mcp",
     express.json({ limit: "8mb" }),
