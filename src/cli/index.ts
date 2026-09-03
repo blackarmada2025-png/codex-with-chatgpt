@@ -198,10 +198,12 @@ program
   .option("--port <port>", "preferred port")
   .action(async (opts: { workspace: string; port?: string }) => {
     const logger = new Logger({ name: "bridge", console: true });
+    const workspace = new Workspace(resolveWorkspace(opts.workspace));
     const bridge = await startBridge({
-      workspaceRoot: resolveWorkspace(opts.workspace),
+      workspaceRoot: workspace.root,
       port: opts.port ? parseInt(opts.port, 10) : undefined,
       logger,
+      gatewayWorkspaceEntries: workspace.gatewayWorkspaceEntries(),
     });
     const shutdown = (): void => {
       void bridge.close().then(() => process.exit(0));

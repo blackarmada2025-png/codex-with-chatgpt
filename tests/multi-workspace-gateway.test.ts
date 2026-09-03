@@ -5,7 +5,7 @@ import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { GatewayWorkspaceRegistry, GatewayWorkspaceError } from "../src/workspace/registry.js";
-import { Workspace } from "../src/workspace/manager.js";
+import { Workspace, WorkspaceConfigError } from "../src/workspace/manager.js";
 import { startBridge, type Bridge } from "../src/bridge/server.js";
 import { appendExecutionRecord } from "../src/execution/records.js";
 import { saveExecutionOutput } from "../src/execution/output.js";
@@ -42,7 +42,48 @@ function makeGatewayFixture(): { boundary: string; a: Workspace; b: Workspace } 
   return { boundary, a: new Workspace(aRoot), b: new Workspace(bRoot) };
 }
 
+function expectInvalidGatewayConfig(root: string, config: unknown): void {
+  write(root, ".c2c.json", JSON.stringify(config));
+  try {
+    new Workspace(root).gatewayWorkspaceEntries();
+    throw new Error("expected invalid Gateway config to reject");
+  } catch (error) {
+    expect(error).toBeInstanceOf(WorkspaceConfigError);
+    expect((error as WorkspaceConfigError).code).toBe("INVALID_GATEWAY_CONFIG");
+  }
+}
+
 describe("GatewayWorkspaceRegistry", () => {
+  it("keeps single-workspace mode when gateway config is missing or disabled", () => {
+    const missing = makeTmpDir("gateway-config-missing");
+    write(missing, "file.txt", "single workspace");
+    expect(new Workspace(missing).gatewayWorkspaceEntries()).toBeUndefined();
+    const disabled = makeTmpDir("gateway-config-disabled");
+    write(
+      disabled,
+      ".c2c.json",
+      JSON.stringify({ gateway: { enabled: false, workspaces: [{ expectedWorkspaceId: "ignored", root: ".." }] } })
+    );
+    expect(new Workspace(disabled).gatewayWorkspaceEntries()).toBeUndefined();
+    cleanup(missing);
+    cleanup(disabled);
+  });
+
+  it("fails closed for invalid enabled Gateway configuration", () => {
+    const root = makeTmpDir("gateway-config-invalid");
+    const cases = [
+      { gateway: { enabled: true } },
+      { gateway: { enabled: true, workspaces: [] } },
+      { gateway: { enabled: true, workspaces: [{}] } },
+      { gateway: { enabled: true, workspaces: [{ expectedWorkspaceId: "same", root: "." }, { expectedWorkspaceId: "same", root: "." }] } },
+      { gateway: { enabled: true, workspaces: [{ expectedWorkspaceId: "x", root: "C:\\\\not-allowed" }] } },
+      { gateway: { enabled: true, workspaces: [{ expectedWorkspaceId: "x", root: String.raw`\\server\share` }] } },
+      { gateway: { enabled: true, workspaces: [{ expectedWorkspaceId: "x", root: "E:\\Obsidian" }] } },
+      { gateway: { enabled: true, workspaces: [{ expectedWorkspaceId: "x", root: "../not-allowed" }] } },
+    ];
+    for (const config of cases) expectInvalidGatewayConfig(root, config);
+    cleanup(root);
+  });
   it("resolves only canonical, allowlisted workspace identities", () => {
     const { boundary, a, b } = makeGatewayFixture();
     const registry = new GatewayWorkspaceRegistry(boundary, [
@@ -166,15 +207,26 @@ describe("multi-workspace MCP gateway mode", () => {
     write(rootB, "hello.txt", "Hello from workspace B with an unstaged change!\n");
     workspaceA = new Workspace(rootA);
     workspaceB = new Workspace(rootB);
+    write(
+      rootA,
+      ".c2c.json",
+      JSON.stringify({
+        gateway: {
+          enabled: true,
+          workspaces: [
+            { expectedWorkspaceId: workspaceA.id, root: "." },
+            { expectedWorkspaceId: workspaceB.id, root: "worktrees/phase1" },
+          ],
+        },
+      })
+    );
+    workspaceA = new Workspace(rootA);
     bridge = await startBridge({
       workspaceRoot: rootA,
       port: 0,
       persistRuntime: false,
       authStoreFile: path.join(makeTmpDir("gateway-auth"), "store.json"),
-      gatewayWorkspaceEntries: [
-        { expectedWorkspaceId: workspaceA.id, root: workspaceA.root },
-        { expectedWorkspaceId: workspaceB.id, root: workspaceB.root },
-      ],
+      gatewayWorkspaceEntries: workspaceA.gatewayWorkspaceEntries(),
     });
     const accessToken = bridge.authStore.issueTokens({
       clientId: "gateway-client",

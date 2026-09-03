@@ -25,6 +25,16 @@ export class WorkspaceError extends Error {
   }
 }
 
+export class WorkspaceConfigError extends Error {
+  constructor(
+    public readonly code: "INVALID_GATEWAY_CONFIG" | "INVALID_PROJECT_CONFIG",
+    message: string
+  ) {
+    super(message);
+    this.name = "WorkspaceConfigError";
+  }
+}
+
 const CASE_INSENSITIVE = process.platform === "win32" || process.platform === "darwin";
 const normCase = (p: string): string => (CASE_INSENSITIVE ? p.toLowerCase() : p);
 
@@ -58,11 +68,36 @@ export interface ListDirectoryResult {
 export interface ProjectConfig {
   name?: string;
   maxIterations?: number;
+  gateway?: unknown;
+}
+
+export interface GatewayWorkspaceConfigEntry {
+  expectedWorkspaceId: string;
+  root: string;
 }
 
 const DEFAULT_MAX_LINES = 400;
 const HARD_MAX_LINES = 2000;
 const DEFAULT_MAX_BYTES = 256 * 1024;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readProjectConfig(root: string): ProjectConfig {
+  const file = path.join(root, ".c2c.json");
+  if (!fs.existsSync(file)) return {};
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (!isRecord(parsed)) throw new Error("Project config must be a JSON object");
+    return parsed as ProjectConfig;
+  } catch (error) {
+    throw new WorkspaceConfigError(
+      "INVALID_PROJECT_CONFIG",
+      `Invalid .c2c.json: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+}
 
 export class Workspace {
   readonly root: string;
@@ -85,8 +120,54 @@ export class Workspace {
     this.root = real;
     this.id = createHash("sha256").update(normCase(real)).digest("hex").slice(0, 12);
     this.ignoreRules = new IgnoreRules(real);
-    this.projectConfig = readJsonIfExists<ProjectConfig>(path.join(real, ".c2c.json")) ?? {};
+    this.projectConfig = readProjectConfig(real);
     this.name = this.projectConfig.name ?? path.basename(real);
+  }
+
+  /**
+   * Resolve an explicit, workspace-owned Gateway allowlist. Missing or disabled
+   * Gateway configuration preserves single-workspace behavior. Validation here
+   * intentionally stops before bridge listen; the registry remains the sole
+   * canonical-root, ID, and boundary verifier.
+   */
+  gatewayWorkspaceEntries(): GatewayWorkspaceConfigEntry[] | undefined {
+    const gateway = this.projectConfig.gateway;
+    if (gateway === undefined) return undefined;
+    if (!isRecord(gateway)) {
+      throw new WorkspaceConfigError("INVALID_GATEWAY_CONFIG", "gateway must be an object");
+    }
+    if (gateway.enabled === false) {
+      return undefined;
+    }
+    if (gateway.enabled !== true) {
+      throw new WorkspaceConfigError("INVALID_GATEWAY_CONFIG", "gateway.enabled must be true or false");
+    }
+    if (!Array.isArray(gateway.workspaces) || gateway.workspaces.length === 0) {
+      throw new WorkspaceConfigError("INVALID_GATEWAY_CONFIG", "enabled gateway requires a non-empty workspaces list");
+    }
+
+    const ids = new Set<string>();
+    return gateway.workspaces.map((entry, index) => {
+      if (!isRecord(entry) || typeof entry.expectedWorkspaceId !== "string" || typeof entry.root !== "string") {
+        throw new WorkspaceConfigError("INVALID_GATEWAY_CONFIG", `workspace entry ${index} is malformed`);
+      }
+      const expectedWorkspaceId = entry.expectedWorkspaceId.trim();
+      const configuredRoot = entry.root.trim();
+      const normalizedRoot = configuredRoot.replace(/\\/g, "/");
+      if (
+        expectedWorkspaceId === "" ||
+        configuredRoot === "" ||
+        path.isAbsolute(configuredRoot) ||
+        normalizedRoot.split("/").includes("..")
+      ) {
+        throw new WorkspaceConfigError("INVALID_GATEWAY_CONFIG", `workspace entry ${index} has an invalid root or ID`);
+      }
+      if (ids.has(expectedWorkspaceId)) {
+        throw new WorkspaceConfigError("INVALID_GATEWAY_CONFIG", `workspace entry ${index} duplicates an expected workspace ID`);
+      }
+      ids.add(expectedWorkspaceId);
+      return { expectedWorkspaceId, root: path.resolve(this.root, configuredRoot) };
+    });
   }
 
   private contains(candidate: string): boolean {
