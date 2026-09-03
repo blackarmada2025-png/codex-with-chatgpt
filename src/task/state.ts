@@ -52,11 +52,3 @@ export class TaskStateStore {
 }
 
 export function isTerminalState(state: TaskStateName): boolean { return terminal.has(state); }
-
-/** Only explicit, read-only command shapes may cross the protected-command boundary. */
-export function classifyProtectedCommand(command: unknown): ProtectedCommandDecision {
- if(typeof command!=="string"||!command.trim())return {decision:"DENY",reason:"EMPTY_OR_UNCLASSIFIED"};
- const normalized=command.trim().replace(/\s+/g," ");
- if(/\b(add|amend|apply|checkout|clean|commit|config|merge|mv|push|rebase|reset|restore|rm)\b/i.test(normalized))return {decision:"DENY",reason:"MUTATING_OR_PROTECTED"};
- return /^(git (diff|log|show|status)( |$)|c2c (status|doctor)( |$))/.test(normalized)?{decision:"ALLOW",reason:"READ_ONLY_COMMAND"}:{decision:"DENY",reason:"EMPTY_OR_UNCLASSIFIED"};
-}
