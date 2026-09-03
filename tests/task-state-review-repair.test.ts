@@ -10,6 +10,7 @@ const make = () => { const dir = makeTmpDir("task-state-review"); dirs.push(dir)
 afterEach(() => { while (dirs.length) cleanup(dirs.pop()!); });
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const waitForFiles = async (files: string[]) => { for (let attempt = 0; attempt < 2_500; attempt++) { if (files.every((file) => fs.existsSync(file))) return; await wait(2); } throw new Error(`fixture readiness timeout: ${files.join(", ")}`); };
 const fixture = (name: string, args: string[]) => new Promise<string>((resolve, reject) => {
   const child = spawn(process.execPath, [path.join(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs"), path.join(process.cwd(), "tests", "fixtures", name), ...args], { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
   let stdout = "", stderr = "";
@@ -61,22 +62,22 @@ describe("FIR-04 malformed stale metadata fails closed", () => {
 describe("FIR-02/FIR-03 independent-process competition", () => {
   it("CASE_REAL_CONCURRENT_REVISION_CAS CASE_REAL_CONCURRENT_CAS_ONE_COMMIT CASE_REAL_CONCURRENT_CAS_FINAL_REVISION_PLUS_ONE CASE_REAL_CONCURRENT_CAS_NO_LOST_UPDATE", async () => {
     for (let run = 0; run < 5; run++) {
-      const { dir, store } = make(), task = store.createTaskState("ws"), start = path.join(dir, `cas-${run}.start`);
-      const first = fixture("task-state-cas-contender.ts", [dir, "ws", task.taskId, "0", start]), second = fixture("task-state-cas-contender.ts", [dir, "ws", task.taskId, "0", start]);
-      await wait(50); fs.writeFileSync(start, "go"); const results = await Promise.all([first, second]);
+      const { dir, store } = make(), task = store.createTaskState("ws"), start = path.join(dir, `cas-${run}.start`), readyA = path.join(dir, `cas-${run}-a.ready`), readyB = path.join(dir, `cas-${run}-b.ready`), startedA = path.join(dir, `cas-${run}-a.started`), startedB = path.join(dir, `cas-${run}-b.started`);
+      const first = fixture("task-state-cas-contender.ts", [dir, "ws", task.taskId, "0", readyA, start, startedA]), second = fixture("task-state-cas-contender.ts", [dir, "ws", task.taskId, "0", readyB, start, startedB]);
+      await waitForFiles([readyA, readyB]); expect(fs.readFileSync(readyA, "utf8")).toBe("READY"); expect(fs.readFileSync(readyB, "utf8")).toBe("READY"); fs.writeFileSync(start, "START"); await waitForFiles([startedA, startedB]); expect(fs.readFileSync(startedA, "utf8")).toBe("STARTED"); expect(fs.readFileSync(startedB, "utf8")).toBe("STARTED"); const results = await Promise.all([first, second]);
       expect(results.filter((result) => result === "SUCCESS")).toHaveLength(1); expect(results.filter((result) => result === "STALE_TASK_STATE")).toHaveLength(1);
       expect(store.readTaskState("ws", task.taskId)).toMatchObject({ status: "VALID", state: { revision: 1, attempt: 1 } });
     }
   });
   it("CASE_REAL_COMPETING_STALE_TAKEOVER CASE_REAL_STALE_TAKEOVER_ONLY_ONE_WINNER CASE_STALE_ARCHIVE_CREATED_ONCE CASE_NEW_LEASE_CREATED_ONCE CASE_LOSER_CANNOT_OVERWRITE_WINNER", async () => {
     for (let run = 0; run < 5; run++) {
-      const { dir, store } = make(), task = store.createTaskState("ws"), lease = store.acquireWorkspaceMutationLease("ws", task.taskId, "old"), leaseDir = (store as any).lease("ws"), stale = { ...lease, ownerPid: 99999999, heartbeatAt: "2020-01-01T00:00:00.000Z" }, start = path.join(dir, `lease-${run}.start`);
+      const { dir, store } = make(), task = store.createTaskState("ws"), lease = store.acquireWorkspaceMutationLease("ws", task.taskId, "old"), leaseDir = (store as any).lease("ws"), stale = { ...lease, ownerPid: 99999999, heartbeatAt: "2020-01-01T00:00:00.000Z" }, start = path.join(dir, `lease-${run}.start`), readyA = path.join(dir, `lease-${run}-a.ready`), readyB = path.join(dir, `lease-${run}-b.ready`), startedA = path.join(dir, `lease-${run}-a.started`), startedB = path.join(dir, `lease-${run}-b.started`);
       fs.writeFileSync(path.join(leaseDir, "lease.json"), JSON.stringify(stale));
-      const first = fixture("mutation-lease-contender.ts", [dir, "ws", task.taskId, "one", start]), second = fixture("mutation-lease-contender.ts", [dir, "ws", task.taskId, "two", start]);
-      await wait(50); fs.writeFileSync(start, "go"); const results = await Promise.all([first, second]), winner = results.find((result) => result.startsWith("SUCCESS:"));
+      const first = fixture("mutation-lease-contender.ts", [dir, "ws", task.taskId, "one", readyA, start, startedA]), second = fixture("mutation-lease-contender.ts", [dir, "ws", task.taskId, "two", readyB, start, startedB]);
+      await waitForFiles([readyA, readyB]); expect(fs.readFileSync(readyA, "utf8")).toBe("READY"); expect(fs.readFileSync(readyB, "utf8")).toBe("READY"); fs.writeFileSync(start, "START"); await waitForFiles([startedA, startedB]); expect(fs.readFileSync(startedA, "utf8")).toBe("STARTED"); expect(fs.readFileSync(startedB, "utf8")).toBe("STARTED"); const results = await Promise.all([first, second]), winner = results.find((result) => result.startsWith("SUCCESS:"));
       expect(winner).toBeDefined(); expect(results.filter((result) => result.startsWith("SUCCESS:")), results.join(" | ")).toHaveLength(1); expect(results.filter((result) => /LEASE_TAKEOVER_RACE|LEASE_NOT_STALE|WORKSPACE_MUTATION_LEASE_HELD|MALFORMED_LEASE_METADATA/.test(result)), results.join(" | ")).toHaveLength(1);
-      expect(fs.readdirSync(path.dirname(leaseDir)).filter((name) => name.startsWith(".mutation-lease.stale.")).length).toBe(1);
-      const current = JSON.parse(fs.readFileSync(path.join(leaseDir, "lease.json"), "utf8")); expect(current.ownerSessionMarker).toBe((winner as string).split(":")[2]);
+      const archives = fs.readdirSync(path.dirname(leaseDir)).filter((name) => name.startsWith(".mutation-lease.stale.")); expect(archives).toHaveLength(1); expect(JSON.parse(fs.readFileSync(path.join(path.dirname(leaseDir), archives[0], "lease", "lease.json"), "utf8"))).toMatchObject({ ownerSessionMarker: "old" });
+      expect(fs.readdirSync(path.dirname(leaseDir)).filter((name) => name === ".mutation-lease")).toHaveLength(1); const current = JSON.parse(fs.readFileSync(path.join(leaseDir, "lease.json"), "utf8")); expect(current).toMatchObject({ workspaceId: "ws", taskId: task.taskId, ownerSessionMarker: (winner as string).split(":")[2] }); expect(typeof current.leaseId).toBe("string"); expect(current.ownerPid).toBeGreaterThan(0); expect(Number.isFinite(Date.parse(current.acquiredAt))).toBe(true); expect(Number.isFinite(Date.parse(current.heartbeatAt))).toBe(true);
     }
   });
 });
