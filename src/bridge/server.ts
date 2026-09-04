@@ -136,7 +136,8 @@ export async function startBridge(opts: BridgeOptions): Promise<Bridge> {
 
   const mcpHandler = createMcpHttpHandler(
     () => createMcpServer({ workspace, logger, gatewayRegistry }),
-    logger
+    logger,
+    { connectorToolNameCompatibility: Boolean(gatewayRegistry) }
   );
   app.all(
     "/mcp",
