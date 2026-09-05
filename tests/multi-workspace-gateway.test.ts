@@ -14,7 +14,7 @@ import { cleanup, isolateStateDir, makeTmpDir, write } from "./helpers.js";
 function makeGatewayGitRepo(root: string): void {
   fs.mkdirSync(root, { recursive: true });
   const git = (args: string[]): void => {
-    const result = spawnSync("C:\\Program Files\\Git\\cmd\\git.exe", args, {
+    const result = spawnSync("git", args, {
       cwd: root,
       encoding: "utf8",
       env: {

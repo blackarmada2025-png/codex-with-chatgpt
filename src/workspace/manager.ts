@@ -84,6 +84,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isAbsoluteOnAnyPlatform(value: string): boolean {
+  return path.posix.isAbsolute(value) || path.win32.isAbsolute(value);
+}
+
 function readProjectConfig(root: string): ProjectConfig {
   const file = path.join(root, ".c2c.json");
   if (!fs.existsSync(file)) return {};
@@ -157,7 +161,7 @@ export class Workspace {
       if (
         expectedWorkspaceId === "" ||
         configuredRoot === "" ||
-        path.isAbsolute(configuredRoot) ||
+        isAbsoluteOnAnyPlatform(configuredRoot) ||
         normalizedRoot.split("/").includes("..")
       ) {
         throw new WorkspaceConfigError("INVALID_GATEWAY_CONFIG", `workspace entry ${index} has an invalid root or ID`);
