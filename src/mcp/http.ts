@@ -5,7 +5,10 @@ import type { Logger } from "../logger/index.js";
 
 // ChatGPT Connector compatibility alias. This is an inbound transport alias,
 // not an MCP canonical tool name and must never be included in tools/list.
-const CONNECTOR_TOOL_NAMESPACE = "orbnexa_c2c_dev_test";
+const CONNECTOR_TOOL_NAMESPACES = new Set([
+  "orbnexa_c2c_dev_test",
+  "codex_with_chatgpt_orbnexa",
+]);
 const CANONICAL_TOOL_NAMES = new Set([
   "workspace_info",
   "git_status",
@@ -20,10 +23,13 @@ const CANONICAL_TOOL_NAMES = new Set([
 
 export function normalizeConnectorToolName(name: unknown): unknown {
   if (typeof name !== "string" || CANONICAL_TOOL_NAMES.has(name)) return name;
-  const prefix = `${CONNECTOR_TOOL_NAMESPACE}.`;
-  if (!name.startsWith(prefix)) return name;
-  const suffix = name.slice(prefix.length);
-  return CANONICAL_TOOL_NAMES.has(suffix) ? suffix : name;
+  for (const namespace of CONNECTOR_TOOL_NAMESPACES) {
+    const prefix = `${namespace}.`;
+    if (!name.startsWith(prefix)) continue;
+    const suffix = name.slice(prefix.length);
+    return CANONICAL_TOOL_NAMES.has(suffix) ? suffix : name;
+  }
+  return name;
 }
 
 function normalizeInboundToolCall(body: unknown): void {

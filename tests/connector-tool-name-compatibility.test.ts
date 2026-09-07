@@ -7,6 +7,7 @@ import { Workspace } from "../src/workspace/manager.js";
 import { cleanup, isolateStateDir, makeTmpDir, write } from "./helpers.js";
 
 const NAMESPACE = "orbnexa_c2c_dev_test";
+const ACTIVE_NAMESPACE = "codex_with_chatgpt_orbnexa";
 const CANONICAL_TOOLS = [
   "workspace_info",
   "git_status",
@@ -118,6 +119,14 @@ describe("Code Gateway connector tool-name compatibility", () => {
       });
       expect(result.isError ?? false, call.name).toBe(false);
     }
+  });
+
+  it("normalizes the active Connector namespace without widening the allowlist", async () => {
+    const result = await gatewayClient.callTool({
+      name: `${ACTIVE_NAMESPACE}.workspace_info`,
+      arguments: { workspace_id: workspace.id },
+    });
+    expect(result.isError ?? false).toBe(false);
   });
 
   it("fails closed for unknown namespaces, suffixes, and double namespaces", async () => {
