@@ -1,11 +1,11 @@
 {
   "sourceRemote": "https://github.com/blackarmada2025-png/codex-with-chatgpt.git",
   "sourceBranch": "codex/c2c-canonical-reconstruction-v1",
-  "sourceCommit": "257f8f7c006ee7f121569cd8fdd35ad1b058f80a",
+  "sourceCommit": "77f1fbb5750714f38f6003b5d9e65cbbb37cfe2f",
   "nodeVersion": "v24.20.0",
   "packageLockHash": "70df031d08ddc23feada47a7c8c820b12fb921874f2285f6a00367309d4fa5fb",
   "buildCommand": "pnpm run build",
-  "buildTimestamp": "2026-09-10T04:47:18.931Z",
+  "buildTimestamp": "2026-09-10T07:41:54.838Z",
   "distFileCount": 68,
   "distSha256Manifest": [
     {
