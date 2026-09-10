@@ -1,11 +1,11 @@
 {
   "sourceRemote": "https://github.com/blackarmada2025-png/codex-with-chatgpt.git",
   "sourceBranch": "codex/c2c-canonical-reconstruction-v1",
-  "sourceCommit": "fef1e4cb7afa38f27046c232b1a710c47e666a1f",
+  "sourceCommit": "ec104c9ea906e499c8d2ca1f8f3955883f34a717",
   "nodeVersion": "v24.20.0",
   "packageLockHash": "70df031d08ddc23feada47a7c8c820b12fb921874f2285f6a00367309d4fa5fb",
   "buildCommand": "pnpm run build",
-  "buildTimestamp": "2026-09-10T03:48:27.613Z",
+  "buildTimestamp": "2026-09-10T04:04:11.350Z",
   "distFileCount": 68,
   "distSha256Manifest": [
     {
@@ -50,19 +50,19 @@
     },
     {
       "path": "dist/bridge/server.js",
-      "sha256": "aa1dee469bf0590129c36994b8cf846b4ce07aaa2e82740ded598b78d78c3994"
+      "sha256": "7df29576517e16bb4b8105ca6e44fa6720e9959fcfbe838e62cff6dbcaaf29c5"
     },
     {
       "path": "dist/bridge/server.js.map",
-      "sha256": "98546d36d4e5c068830c5dd24b2c951199b37e1e7597e1443788a100bffda023"
+      "sha256": "2e20153b9ca50c7cfc5dd1f64af61952b169ebcb6e42b8b6bd9b1dbf69de5566"
     },
     {
       "path": "dist/cli/index.js",
-      "sha256": "0695ae5c4e7ece0cc9e211870d83be6bb369b8799222db3bb6051005e34a102b"
+      "sha256": "d970bc21961fb0740d690d0308f42f3a74756222dcb9354179820e15a94a950a"
     },
     {
       "path": "dist/cli/index.js.map",
-      "sha256": "7f86a160cfe4862a4aeb263d566908b7ca30389d5d92a49ba6424e2c47bfb8a3"
+      "sha256": "c9f759ed61c6ae2a21110baec976a9f118cd762e0b105cd52a6e0aed0a4433a2"
     },
     {
       "path": "dist/config/endpoint.js",
@@ -162,11 +162,11 @@
     },
     {
       "path": "dist/process/daemon.js",
-      "sha256": "5fdb2a6fb2c5ecd83d88c57addda6070ea1c78b1cff324744d18b8718ced16d7"
+      "sha256": "fdfd1c3d4ae9c1033ec8ae3156b9edbc2a9b11367265dd518315245cddd935fb"
     },
     {
       "path": "dist/process/daemon.js.map",
-      "sha256": "58ecb7a86a8e3c76b37d4029b9aac12dcf0fdc61b9d4237a2c7eebacc9b98cbb"
+      "sha256": "be3b2e1ae77188c904c0c59a9cc8d585c45c73184cefd1546bad4fd33e69a525"
     },
     {
       "path": "dist/session/state.js",
