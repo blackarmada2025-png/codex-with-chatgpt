@@ -26,6 +26,16 @@ const relativeFiles = files(dist).sort().map((file) => ({
   path: path.relative(root, file).replaceAll("\\", "/"),
   sha256: hash(file),
 }));
+const productionCriticalFiles = [
+  "ops/cutover/c2c-production-cutover.ps1",
+  "ops/watchdog/c2c-production-watchdog.ps1",
+  "ops/watchdog/c2c-production-watchdog.config.example.json",
+  "scripts/install-production-watchdog.ps1",
+].map((relative) => {
+  const file = path.join(root, relative);
+  if (!fs.existsSync(file)) throw new Error(`production-critical file is missing: ${relative}`);
+  return { path: relative, sha256: hash(file) };
+});
 const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 const lockfile = path.join(root, "pnpm-lock.yaml");
 const manifest = {
@@ -38,6 +48,7 @@ const manifest = {
   buildTimestamp: new Date().toISOString(),
   distFileCount: relativeFiles.length,
   distSha256Manifest: relativeFiles,
+  productionCriticalSha256Manifest: productionCriticalFiles,
   testResult,
   deploymentTarget: "UNSET — this reconstruction is not production",
   historicalR3SourceCommit: "UNKNOWN",
