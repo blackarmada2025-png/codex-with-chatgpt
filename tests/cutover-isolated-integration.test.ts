@@ -95,7 +95,8 @@ function run(args: string[]) {
 async function fixture(hostname = "127.0.0.1:1") {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "c2c-cutover-real-"));
   fixtures.push(dir);
-  const state = path.join(dir, "state");
+  const legacyState = path.join(dir, "legacy-state");
+  const state = path.join(dir, "formal-state");
   const workspace = path.join(dir, "workspace");
   const runtime = path.join(dir, "watchdog");
   const oldDist = path.join(dir, "old-dist");
@@ -106,30 +107,34 @@ async function fixture(hostname = "127.0.0.1:1") {
   const workspaceRoot = fs.realpathSync.native(workspace);
   fs.cpSync(path.join(root, "dist"), oldDist, { recursive: true });
   fs.symlinkSync(path.join(root, "node_modules"), path.join(dir, "node_modules"), "junction");
-  const started = spawnSync(process.execPath, [oldCli, "start", "--workspace", workspaceRoot, "--port", String(port), "--json"], { encoding: "utf8", env: { ...process.env, C2C_STATE_DIR: state } });
+  const started = spawnSync(process.execPath, [oldCli, "start", "--workspace", workspaceRoot, "--port", String(port), "--json"], { encoding: "utf8", env: { ...process.env, C2C_STATE_DIR: legacyState } });
   expect(started.status, started.stderr).toBe(0);
   const start = JSON.parse(started.stdout) as { workspaceId: string };
+  const legacyRuntimeFile = path.join(legacyState, "runtime", `${start.workspaceId}.json`);
   const runtimeFile = path.join(state, "runtime", `${start.workspaceId}.json`);
-  const oldRuntime = JSON.parse(fs.readFileSync(runtimeFile, "utf8")) as { pid: number };
+  const oldRuntime = JSON.parse(fs.readFileSync(legacyRuntimeFile, "utf8")) as { pid: number };
   fixturePids.add(oldRuntime.pid);
-  const auth = path.join(state, "auth", `${start.workspaceId}.json`);
+  const auth = path.join(legacyState, "auth", `${start.workspaceId}.json`);
   fs.mkdirSync(path.dirname(auth), { recursive: true });
   fs.writeFileSync(auth, JSON.stringify({ clients: [{ clientId: "fixture" }], tokens: [{ hash: "fixture", revoked: false }] }));
+  const formalAuth = path.join(state, "auth", `${start.workspaceId}.json`);
+  fs.mkdirSync(path.dirname(formalAuth), { recursive: true });
+  fs.copyFileSync(auth, formalAuth);
   fs.mkdirSync(runtime, { recursive: true });
   fs.copyFileSync(watchdog, path.join(runtime, "orbnexa-vault-c2c-prod-watchdog.ps1"));
   const config = JSON.parse(fs.readFileSync(template, "utf8"));
-  Object.assign(config, { workspace: workspaceRoot, workspaceId: start.workspaceId, requiredPort: port, gatewayCli: oldCli, c2cStateDir: state, runtimePath: runtimeFile, hostname });
+  Object.assign(config, { workspace: workspaceRoot, workspaceId: start.workspaceId, requiredPort: port, gatewayCli: oldCli, c2cStateDir: legacyState, runtimePath: legacyRuntimeFile, hostname });
   fs.writeFileSync(path.join(runtime, "c2c-production-watchdog.config.json"), JSON.stringify(config));
   const runtimeScript = path.join(runtime, "orbnexa-vault-c2c-prod-watchdog.ps1");
   const runtimeConfig = path.join(runtime, "c2c-production-watchdog.config.json");
   const taskName = `C2C-Isolated-Watchdog-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   registerIsolatedWatchdog(taskName, runtimeScript, runtimeConfig);
   const initialWatchdogPid = await waitForWatchdog(runtimeScript, runtimeConfig);
-  return { auth, oldCli, oldPid: oldRuntime.pid, port, runtime, runtimeConfig, runtimeFile, runtimeScript, state, workspace: workspaceRoot, workspaceId: start.workspaceId, taskName, initialWatchdogPid };
+  return { auth, formalAuth, legacyRuntimeFile, oldCli, oldPid: oldRuntime.pid, port, runtime, runtimeConfig, runtimeFile, runtimeScript, state, legacyState, workspace: workspaceRoot, workspaceId: start.workspaceId, taskName, initialWatchdogPid };
 }
 
 function args(f: Awaited<ReturnType<typeof fixture>>, simulate = false) {
-  return ["-CandidateCli", candidateCli, "-OldGatewayCli", f.oldCli, "-C2CStateDir", f.state, "-Workspace", f.workspace, "-WorkspaceId", f.workspaceId, "-Port", String(f.port), "-WatchdogRuntimeDirectory", f.runtime, "-ScheduledTaskName", `\\${f.taskName}`, "-IsolatedTestMode", ...(simulate ? ["-SimulatePublicNetwork"] : [])];
+  return ["-CandidateCli", candidateCli, "-OldGatewayCli", f.oldCli, "-C2CStateDir", f.state, "-LegacyC2CStateDir", f.legacyState, "-Workspace", f.workspace, "-WorkspaceId", f.workspaceId, "-Port", String(f.port), "-WatchdogRuntimeDirectory", f.runtime, "-ScheduledTaskName", `\\${f.taskName}`, "-IsolatedTestMode", ...(simulate ? ["-SimulatePublicNetwork"] : [])];
 }
 
 describe("isolated production cutover execution path", () => {
@@ -157,7 +162,7 @@ describe("isolated production cutover execution path", () => {
     const before = fs.readFileSync(f.auth, "utf8");
     const result = run(args(f));
     expect(result.status).toBe(0);
-    const restored = JSON.parse(fs.readFileSync(f.runtimeFile, "utf8")) as { pid: number; port: number; workspaceId: string };
+    const restored = JSON.parse(fs.readFileSync(f.legacyRuntimeFile, "utf8")) as { pid: number; port: number; workspaceId: string };
     expect(restored).toMatchObject({ port: f.port, workspaceId: f.workspaceId });
     expect(restored.pid).not.toBe(f.oldPid);
     expect(isAlive(f.oldPid)).toBe(false);

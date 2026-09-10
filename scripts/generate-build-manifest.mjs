@@ -6,9 +6,11 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const dist = path.join(root, "dist");
 const outputDir = path.join(root, "artifacts");
-const output = path.join(outputDir, "build-manifest.json");
+const outputArg = process.argv.find((arg) => arg.startsWith("--output="));
+const output = outputArg ? path.resolve(root, outputArg.slice("--output=".length)) : path.join(outputDir, "build-manifest.json");
 const testResultArg = process.argv.find((arg) => arg.startsWith("--test-result="));
 const testResult = testResultArg?.slice("--test-result=".length) ?? "NOT_RUN";
+const requireCleanHead = process.argv.includes("--require-clean-head");
 
 function hash(file) {
   return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -51,6 +53,7 @@ const releaseCriticalFiles = [
   return { path: relative, sha256: hash(file) };
 });
 const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+if (requireCleanHead && git("status", "--porcelain")) throw new Error("clean HEAD is required for a release manifest");
 const lockfile = path.join(root, "pnpm-lock.yaml");
 const manifest = {
   sourceRemote: git("remote", "get-url", "origin"),
@@ -68,6 +71,6 @@ const manifest = {
   deploymentTarget: "UNSET — this reconstruction is not production",
   historicalR3SourceCommit: "UNKNOWN",
 };
-fs.mkdirSync(outputDir, { recursive: true });
+fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(output, `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(output);

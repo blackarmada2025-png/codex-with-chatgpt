@@ -1,11 +1,11 @@
 {
   "sourceRemote": "https://github.com/blackarmada2025-png/codex-with-chatgpt.git",
   "sourceBranch": "codex/c2c-canonical-reconstruction-v1",
-  "sourceCommit": "4730039a578d797bb17979457f95fbd219f09f10",
+  "sourceCommit": "828a42fbae15b09256ff00d50a5cee1e74e5049f",
   "nodeVersion": "v24.20.0",
   "packageLockHash": "70df031d08ddc23feada47a7c8c820b12fb921874f2285f6a00367309d4fa5fb",
   "buildCommand": "pnpm run build",
-  "buildTimestamp": "2026-09-10T10:29:53.763Z",
+  "buildTimestamp": "2026-09-10T10:44:54.156Z",
   "distFileCount": 68,
   "distSha256Manifest": [
     {
@@ -284,7 +284,7 @@
   "productionCriticalSha256Manifest": [
     {
       "path": "ops/cutover/c2c-production-cutover.ps1",
-      "sha256": "87d9347739c306d951dc96c1f3e4955ea676ee3b15d84a71480a7dfc7f66bd23"
+      "sha256": "09eb90c29e21cdd02d62252ce1d396c63d3bf919854f333c9b14d7cd5c1a1923"
     },
     {
       "path": "ops/watchdog/c2c-production-watchdog.ps1",
@@ -300,13 +300,13 @@
     },
     {
       "path": "scripts/generate-build-manifest.mjs",
-      "sha256": "60db6a0b03bf7d844ffeb0fc146a786394338b8a28d09691b55949ee31b50059"
+      "sha256": "65bfec90f6024e32b81f6a2d40d2ff89c7fa2b4467f88fd7a4fbc8d13188da55"
     }
   ],
   "releaseCriticalSha256Manifest": [
     {
       "path": "ops/cutover/c2c-production-cutover.ps1",
-      "sha256": "87d9347739c306d951dc96c1f3e4955ea676ee3b15d84a71480a7dfc7f66bd23"
+      "sha256": "09eb90c29e21cdd02d62252ce1d396c63d3bf919854f333c9b14d7cd5c1a1923"
     },
     {
       "path": "ops/watchdog/c2c-production-watchdog.ps1",
@@ -322,11 +322,11 @@
     },
     {
       "path": "scripts/generate-build-manifest.mjs",
-      "sha256": "60db6a0b03bf7d844ffeb0fc146a786394338b8a28d09691b55949ee31b50059"
+      "sha256": "65bfec90f6024e32b81f6a2d40d2ff89c7fa2b4467f88fd7a4fbc8d13188da55"
     },
     {
       "path": "tests/cutover-isolated-integration.test.ts",
-      "sha256": "2937f5ae2858e4e6daaaaf7a802b9f0d6b5d50b3e7f957e89fc369984ade8a53"
+      "sha256": "893538950500166a53899354195c6a3e617068845cb2eb2466cca94900fbf842"
     },
     {
       "path": "tests/scheduled-task-control-plane.probe.ps1",
