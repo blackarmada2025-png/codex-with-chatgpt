@@ -4,6 +4,7 @@
   "requiredPort": 48765,
   "node": "C:\\Program Files\\nodejs\\node.exe",
   "gatewayCli": "__C2C_GATEWAY_CLI__",
+  "c2cStateDir": "C:\\codex-c2c-test\\state",
   "runtimePath": "C:\\Users\\Administrator\\AppData\\Local\\codex-with-chatgpt\\runtime\\f7c6958b80ed.json",
   "cloudflared": "C:\\Program Files (x86)\\cloudflared\\cloudflared.exe",
   "cloudflaredConfig": "C:\\Users\\Administrator\\.cloudflared\\config.yml",

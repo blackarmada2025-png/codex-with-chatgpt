@@ -29,7 +29,7 @@ if ($ContractTest) {
 
 $config = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
 $workspace = [string]$config.workspace; $workspaceId = [string]$config.workspaceId; $requiredPort = [int]$config.requiredPort
-$node = [string]$config.node; $cli = [string]$config.gatewayCli; $runtimePath = [string]$config.runtimePath
+$node = [string]$config.node; $cli = [string]$config.gatewayCli; $runtimePath = [string]$config.runtimePath; $c2cStateDir = [string]$config.c2cStateDir
 $cloudflared = [string]$config.cloudflared; $cloudflaredConfig = [string]$config.cloudflaredConfig; $tunnelId = [string]$config.tunnelId; $hostname = [string]$config.hostname
 $candidateGatewayPid = $null; $candidateTunnelPid = $null
 
@@ -47,7 +47,21 @@ function Get-GatewayState { [pscustomobject]@{ portOwner=Get-PortOwner; identity
 function Get-NamedTunnelProcesses { @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq 'cloudflared.exe' -and $_.CommandLine -like "*$tunnelId*" -and $_.CommandLine -like "*$cloudflaredConfig*" }) }
 function Test-PublicContract { try { $health = Invoke-RestMethod -Uri "https://$hostname/health" -TimeoutSec 15; return ($health.service -eq 'c2c-bridge' -and $health.workspaceId -eq $workspaceId) } catch { return $false } }
 function Get-TunnelState { $existing=Get-NamedTunnelProcesses; [pscustomobject]@{ existingCount=@($existing).Count; identityHealthy=(@($existing).Count -eq 1); publicHealthy=Test-PublicContract; processId=if (@($existing).Count -eq 1) { [int]$existing[0].ProcessId } else { $null } } }
-function Start-StrictGateway { if (Get-PortOwner) { throw "PORT_IN_USE: 127.0.0.1:$requiredPort" }; $output=@(& $node $cli start --workspace $workspace --port $requiredPort --json 2>&1); if ($LASTEXITCODE -ne 0) { throw "GATEWAY_START_FAILED: $($output -join ' ')" }; $deadline=(Get-Date).AddSeconds(25); do { $runtime=Read-VaultRuntime; if ($runtime -and $runtime.pid) { $script:candidateGatewayPid=[int]$runtime.pid }; if (Test-GatewayIdentity) { return }; Start-Sleep -Milliseconds 500 } while ((Get-Date) -lt $deadline); throw 'GATEWAY_CONTRACT_FAILED' }
+function Start-StrictGateway {
+    if (Get-PortOwner) { throw "PORT_IN_USE: 127.0.0.1:$requiredPort" }
+    if ([string]::IsNullOrWhiteSpace($c2cStateDir)) { throw 'C2C_STATE_DIR_REQUIRED' }
+    $previousStateDir = $env:C2C_STATE_DIR
+    try {
+        $env:C2C_STATE_DIR = $c2cStateDir
+        $output=@(& $node $cli start --workspace $workspace --port $requiredPort --json 2>&1)
+        if ($LASTEXITCODE -ne 0) { throw "GATEWAY_START_FAILED: $($output -join ' ')" }
+    } finally {
+        if ($null -eq $previousStateDir) { Remove-Item Env:C2C_STATE_DIR -ErrorAction SilentlyContinue } else { $env:C2C_STATE_DIR = $previousStateDir }
+    }
+    $deadline=(Get-Date).AddSeconds(25)
+    do { $runtime=Read-VaultRuntime; if ($runtime -and $runtime.pid) { $script:candidateGatewayPid=[int]$runtime.pid }; if (Test-GatewayIdentity) { return }; Start-Sleep -Milliseconds 500 } while ((Get-Date) -lt $deadline)
+    throw 'GATEWAY_CONTRACT_FAILED'
+}
 function Start-NamedTunnel { $argumentList='tunnel --config "{0}" run {1}' -f $cloudflaredConfig,$tunnelId; $process=Start-Process -FilePath $cloudflared -ArgumentList $argumentList -WindowStyle Hidden -PassThru; $script:candidateTunnelPid=[int]$process.Id; $deadline=(Get-Date).AddSeconds(50); do { if ((Get-Process -Id $candidateTunnelPid -ErrorAction SilentlyContinue) -and (Test-PublicContract)) { return }; Start-Sleep -Milliseconds 500 } while ((Get-Date) -lt $deadline); throw 'NAMED_TUNNEL_CONNECTION_TIMEOUT' }
 
 try {
