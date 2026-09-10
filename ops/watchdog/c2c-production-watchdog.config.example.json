@@ -1,0 +1,12 @@
+{
+  "workspace": "E:\\Obsidian",
+  "workspaceId": "f7c6958b80ed",
+  "requiredPort": 48765,
+  "node": "C:\\Program Files\\nodejs\\node.exe",
+  "gatewayCli": "__C2C_GATEWAY_CLI__",
+  "runtimePath": "C:\\Users\\Administrator\\AppData\\Local\\codex-with-chatgpt\\runtime\\f7c6958b80ed.json",
+  "cloudflared": "C:\\Program Files (x86)\\cloudflared\\cloudflared.exe",
+  "cloudflaredConfig": "C:\\Users\\Administrator\\.cloudflared\\config.yml",
+  "tunnelId": "c0c924dc-33f0-4116-98b0-ba4b52385a9d",
+  "hostname": "vault.orbnexa.com"
+}
