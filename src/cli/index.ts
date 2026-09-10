@@ -161,11 +161,21 @@ interface AdminInfo {
   startedAt: string;
 }
 
+function parseStrictPort(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  if (!/^\d+$/.test(raw)) throw new Error("INVALID_PORT: port must be an integer between 1 and 65535");
+  const port = Number(raw);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error("INVALID_PORT: port must be an integer between 1 and 65535");
+  }
+  return port;
+}
+
 async function ensureBridgeAndTunnel(
   workspaceRoot: string,
-  opts: { tunnel: boolean }
+  opts: { tunnel: boolean; port?: number }
 ): Promise<{ runtime: RuntimeState; info: AdminInfo; mcpUrl: string | null }> {
-  const { runtime } = await ensureBridge(workspaceRoot);
+  const { runtime } = await ensureBridge(workspaceRoot, { port: opts.port });
   let info = await adminFetch<AdminInfo>(runtime, "GET", "/admin/info");
   let mcpUrl: string | null = info.publicUrl ? `${info.publicUrl}/mcp` : null;
   if (opts.tunnel && !info.publicUrl) {
@@ -201,7 +211,8 @@ program
     const workspace = new Workspace(resolveWorkspace(opts.workspace));
     const bridge = await startBridge({
       workspaceRoot: workspace.root,
-      port: opts.port ? parseInt(opts.port, 10) : undefined,
+      port: parseStrictPort(opts.port),
+      strictPort: opts.port !== undefined,
       logger,
       gatewayWorkspaceEntries: workspace.gatewayWorkspaceEntries(),
     });
@@ -219,12 +230,14 @@ program
   .command("start")
   .description("Start (or reuse) the bridge for this workspace")
   .option("-w, --workspace <path>", "workspace root (defaults to current directory)")
+  .option("--port <port>", "required local port; fail if unavailable")
   .option("--tunnel", "also establish the secure public connection", false)
   .option("--json", "machine-readable output", false)
-  .action(async (opts: { workspace?: string; tunnel: boolean; json: boolean }) => {
+  .action(async (opts: { workspace?: string; port?: string; tunnel: boolean; json: boolean }) => {
     const root = resolveWorkspace(opts.workspace);
     try {
-      const { runtime, info, mcpUrl } = await ensureBridgeAndTunnel(root, { tunnel: opts.tunnel });
+      const port = parseStrictPort(opts.port);
+      const { runtime, info, mcpUrl } = await ensureBridgeAndTunnel(root, { tunnel: opts.tunnel, port });
       const connectorName = mcpUrl
         ? persistWorkspaceEndpoint({
             workspaceId: info.workspaceId,

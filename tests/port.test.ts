@@ -43,6 +43,21 @@ describe("port collision handling", () => {
     cleanup(rootB);
   });
 
+  it("hard-fails an occupied strict port without fallback", async () => {
+    isolateStateDir();
+    const rootA = makeTmpDir("strict-port-a");
+    const rootB = makeTmpDir("strict-port-b");
+    write(rootA, "a.txt", "a");
+    write(rootB, "b.txt", "b");
+    const port = 48000 + Math.floor(Math.random() * 1000);
+    const bridge = await startBridge({ workspaceRoot: rootA, port, persistRuntime: false, authStoreFile: path.join(makeTmpDir("auth"), "a.json") });
+    await expect(startBridge({ workspaceRoot: rootB, port, strictPort: true, persistRuntime: false, authStoreFile: path.join(makeTmpDir("auth"), "b.json") })).rejects.toMatchObject({ code: "EADDRINUSE" });
+    expect(bridge.port).toBe(port);
+    await bridge.close();
+    cleanup(rootA);
+    cleanup(rootB);
+  });
+
   it("refuses to bind non-loopback hosts", async () => {
     const root = makeTmpDir("port-c");
     write(root, "c.txt", "c");

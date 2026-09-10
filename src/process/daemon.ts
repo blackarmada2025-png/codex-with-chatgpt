@@ -32,7 +32,12 @@ export interface EnsureBridgeResult {
 export async function ensureBridge(workspaceRoot: string, opts: { port?: number } = {}): Promise<EnsureBridgeResult> {
   const workspace = new Workspace(workspaceRoot);
   const observation = await findBridgeObservation(workspace.id);
-  if (observation.state === "healthy") return { runtime: observation.runtime, spawned: false };
+  if (observation.state === "healthy") {
+    if (opts.port !== undefined && observation.runtime.port !== opts.port) {
+      throw new Error(`STRICT_PORT_MISMATCH: bridge already runs on ${observation.runtime.port}, requested ${opts.port}`);
+    }
+    return { runtime: observation.runtime, spawned: false };
+  }
   if (observation.state === "unknown") {
     throw new Error(
       `Bridge state is uncertain (${observation.reason}); refusing to start another bridge.`
@@ -69,6 +74,10 @@ export async function ensureBridge(workspaceRoot: string, opts: { port?: number 
     const runtime = await findLiveBridge(workspace.id);
     if (runtime) return { runtime, spawned: true };
     if (child.exitCode !== null && child.exitCode !== 0) {
+      const output = fs.readFileSync(logFile, "utf8");
+      if (opts.port !== undefined && /EADDRINUSE/.test(output)) {
+        throw new Error(`STRICT_PORT_UNAVAILABLE: ${opts.port}`);
+      }
       throw new Error(`Bridge process exited with code ${child.exitCode}. See ${logFile}`);
     }
   }

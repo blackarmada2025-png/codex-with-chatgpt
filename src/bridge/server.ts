@@ -33,6 +33,8 @@ function tunnelForWorkspace(workspaceId: string, logger: Logger): TunnelProvider
 export interface BridgeOptions {
   workspaceRoot: string;
   port?: number;
+  /** Refuse an ephemeral fallback when the caller requires this exact port. */
+  strictPort?: boolean;
   host?: string;
   logger?: Logger;
   tunnelProvider?: TunnelProvider;
@@ -62,9 +64,15 @@ export interface Bridge {
 }
 
 /**
- * Listen on the preferred port; on EADDRINUSE fall back to an ephemeral port.
+ * Listen on the preferred port. Explicit production ports can opt out of the
+ * normal ephemeral fallback so watchdog callers never silently change ports.
  */
-function listen(app: express.Express, host: string, preferredPort: number): Promise<{ server: Server; port: number }> {
+function listen(
+  app: express.Express,
+  host: string,
+  preferredPort: number,
+  strictPort = false
+): Promise<{ server: Server; port: number }> {
   return new Promise((resolve, reject) => {
     const tryListen = (port: number, allowFallback: boolean): void => {
       const server = app.listen(port, host);
@@ -81,7 +89,7 @@ function listen(app: express.Express, host: string, preferredPort: number): Prom
         }
       });
     };
-    tryListen(preferredPort, preferredPort !== 0);
+    tryListen(preferredPort, !strictPort && preferredPort !== 0);
   });
 }
 
@@ -223,7 +231,7 @@ export async function startBridge(opts: BridgeOptions): Promise<Bridge> {
     }, 100);
   });
 
-  const { server, port } = await listen(app, host, opts.port ?? DEFAULT_PORT);
+  const { server, port } = await listen(app, host, opts.port ?? DEFAULT_PORT, opts.strictPort ?? false);
   const startedAt = new Date().toISOString();
   logger.info(`Bridge listening on ${host}:${port} for workspace ${workspace.name} (${workspace.id})`);
 
