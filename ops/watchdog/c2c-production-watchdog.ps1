@@ -1,7 +1,8 @@
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot 'c2c-production-watchdog.config.json'),
     [string]$ContractFixture,
-    [switch]$ContractTest
+    [switch]$ContractTest,
+    [switch]$IsolatedTestMode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -65,8 +66,13 @@ function Start-StrictGateway {
 function Start-NamedTunnel { $argumentList='tunnel --config "{0}" run {1}' -f $cloudflaredConfig,$tunnelId; $process=Start-Process -FilePath $cloudflared -ArgumentList $argumentList -WindowStyle Hidden -PassThru; $script:candidateTunnelPid=[int]$process.Id; $deadline=(Get-Date).AddSeconds(50); do { if ((Get-Process -Id $candidateTunnelPid -ErrorAction SilentlyContinue) -and (Test-PublicContract)) { return }; Start-Sleep -Milliseconds 500 } while ((Get-Date) -lt $deadline); throw 'NAMED_TUNNEL_CONNECTION_TIMEOUT' }
 
 try {
-    foreach ($requiredFile in @($node,$cli,$cloudflared,$cloudflaredConfig)) { if (-not (Test-Path -LiteralPath $requiredFile)) { throw "REQUIRED_FILE_MISSING: $requiredFile" } }
+    foreach ($requiredFile in @($node,$cli)) { if (-not (Test-Path -LiteralPath $requiredFile)) { throw "REQUIRED_FILE_MISSING: $requiredFile" } }
     $gatewayAction=Resolve-GatewayAction (Get-GatewayState); if ($gatewayAction -eq 'fail') { throw "PORT_OCCUPIED_BY_NON_TARGET: 127.0.0.1:$requiredPort" }; if ($gatewayAction -eq 'adopt') { $script:candidateGatewayPid=[int](Read-VaultRuntime).pid } else { Start-StrictGateway }
+    if ($IsolatedTestMode) {
+        [pscustomobject]@{ok=$true;gatewayAction=$gatewayAction;tunnelAction='isolated';gatewayPid=$candidateGatewayPid;cloudflaredPid=$null}|ConvertTo-Json -Compress
+        while ($true) { if (-not (Test-GatewayIdentity)) { throw 'GATEWAY_CONTRACT_LOST' }; Start-Sleep -Seconds 1 }
+    }
+    foreach ($requiredFile in @($cloudflared,$cloudflaredConfig)) { if (-not (Test-Path -LiteralPath $requiredFile)) { throw "REQUIRED_FILE_MISSING: $requiredFile" } }
     $tunnelAction=Resolve-TunnelAction (Get-TunnelState); if ($tunnelAction -eq 'fail') { throw 'NAMED_TUNNEL_NOT_ADOPTABLE' }; if ($tunnelAction -eq 'adopt') { $script:candidateTunnelPid=(Get-TunnelState).processId } else { Start-NamedTunnel }
     [pscustomobject]@{ok=$true;gatewayAction=$gatewayAction;tunnelAction=$tunnelAction;gatewayPid=$candidateGatewayPid;cloudflaredPid=$candidateTunnelPid}|ConvertTo-Json -Compress
     while ($true) { if (-not (Test-GatewayIdentity)) { throw 'GATEWAY_CONTRACT_LOST' }; if (-not (Get-Process -Id $candidateTunnelPid -ErrorAction SilentlyContinue)) { throw 'NAMED_TUNNEL_PROCESS_LOST' }; Start-Sleep -Seconds 30 }

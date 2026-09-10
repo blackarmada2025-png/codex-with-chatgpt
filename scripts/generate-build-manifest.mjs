@@ -31,9 +31,23 @@ const productionCriticalFiles = [
   "ops/watchdog/c2c-production-watchdog.ps1",
   "ops/watchdog/c2c-production-watchdog.config.example.json",
   "scripts/install-production-watchdog.ps1",
+  "scripts/generate-build-manifest.mjs",
 ].map((relative) => {
   const file = path.join(root, relative);
   if (!fs.existsSync(file)) throw new Error(`production-critical file is missing: ${relative}`);
+  return { path: relative, sha256: hash(file) };
+});
+const releaseCriticalFiles = [
+  "ops/cutover/c2c-production-cutover.ps1",
+  "ops/watchdog/c2c-production-watchdog.ps1",
+  "ops/watchdog/c2c-production-watchdog.config.example.json",
+  "scripts/install-production-watchdog.ps1",
+  "scripts/generate-build-manifest.mjs",
+  "tests/cutover-isolated-integration.test.ts",
+  "tests/scheduled-task-control-plane.probe.ps1",
+].map((relative) => {
+  const file = path.join(root, relative);
+  if (!fs.existsSync(file)) throw new Error(`release-critical file is missing: ${relative}`);
   return { path: relative, sha256: hash(file) };
 });
 const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
@@ -49,6 +63,7 @@ const manifest = {
   distFileCount: relativeFiles.length,
   distSha256Manifest: relativeFiles,
   productionCriticalSha256Manifest: productionCriticalFiles,
+  releaseCriticalSha256Manifest: releaseCriticalFiles,
   testResult,
   deploymentTarget: "UNSET — this reconstruction is not production",
   historicalR3SourceCommit: "UNKNOWN",

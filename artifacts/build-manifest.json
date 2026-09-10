@@ -1,11 +1,11 @@
 {
   "sourceRemote": "https://github.com/blackarmada2025-png/codex-with-chatgpt.git",
   "sourceBranch": "codex/c2c-canonical-reconstruction-v1",
-  "sourceCommit": "5fc3ad9fca266bb9173d00f61641ee7e6641b858",
+  "sourceCommit": "4730039a578d797bb17979457f95fbd219f09f10",
   "nodeVersion": "v24.20.0",
   "packageLockHash": "70df031d08ddc23feada47a7c8c820b12fb921874f2285f6a00367309d4fa5fb",
   "buildCommand": "pnpm run build",
-  "buildTimestamp": "2026-09-10T09:42:37.985Z",
+  "buildTimestamp": "2026-09-10T10:29:53.763Z",
   "distFileCount": 68,
   "distSha256Manifest": [
     {
@@ -284,11 +284,11 @@
   "productionCriticalSha256Manifest": [
     {
       "path": "ops/cutover/c2c-production-cutover.ps1",
-      "sha256": "b71be58c95ebf3721b46e4841fff71130db55bff2e9a46b06d1b944b784fcbd7"
+      "sha256": "87d9347739c306d951dc96c1f3e4955ea676ee3b15d84a71480a7dfc7f66bd23"
     },
     {
       "path": "ops/watchdog/c2c-production-watchdog.ps1",
-      "sha256": "483c7e6a8ddb456c23b5b5b830af62751307f490939e1dcf9546e0cc28c67c0b"
+      "sha256": "6d1546429f6553fff7478956f2a5129153620d552d0d19e6d84fc54147edb6c7"
     },
     {
       "path": "ops/watchdog/c2c-production-watchdog.config.example.json",
@@ -297,6 +297,40 @@
     {
       "path": "scripts/install-production-watchdog.ps1",
       "sha256": "9e4c1b29c0ea8286836ca43341834a35c2dd767061942c9ead119090c7391a77"
+    },
+    {
+      "path": "scripts/generate-build-manifest.mjs",
+      "sha256": "60db6a0b03bf7d844ffeb0fc146a786394338b8a28d09691b55949ee31b50059"
+    }
+  ],
+  "releaseCriticalSha256Manifest": [
+    {
+      "path": "ops/cutover/c2c-production-cutover.ps1",
+      "sha256": "87d9347739c306d951dc96c1f3e4955ea676ee3b15d84a71480a7dfc7f66bd23"
+    },
+    {
+      "path": "ops/watchdog/c2c-production-watchdog.ps1",
+      "sha256": "6d1546429f6553fff7478956f2a5129153620d552d0d19e6d84fc54147edb6c7"
+    },
+    {
+      "path": "ops/watchdog/c2c-production-watchdog.config.example.json",
+      "sha256": "95f4a4bf2b781eb93deb79f3bcd22409769ce26626ac1982aca027fe2fcc7c78"
+    },
+    {
+      "path": "scripts/install-production-watchdog.ps1",
+      "sha256": "9e4c1b29c0ea8286836ca43341834a35c2dd767061942c9ead119090c7391a77"
+    },
+    {
+      "path": "scripts/generate-build-manifest.mjs",
+      "sha256": "60db6a0b03bf7d844ffeb0fc146a786394338b8a28d09691b55949ee31b50059"
+    },
+    {
+      "path": "tests/cutover-isolated-integration.test.ts",
+      "sha256": "2937f5ae2858e4e6daaaaf7a802b9f0d6b5d50b3e7f957e89fc369984ade8a53"
+    },
+    {
+      "path": "tests/scheduled-task-control-plane.probe.ps1",
+      "sha256": "67fbff07aa508fb600670a684d92fa7ba7dd093624018d06d4c34bdcc3ebd5a3"
     }
   ],
   "testResult": "PASS",
