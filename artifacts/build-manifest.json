@@ -1,0 +1,287 @@
+{
+  "sourceRemote": "https://github.com/blackarmada2025-png/codex-with-chatgpt.git",
+  "sourceBranch": "codex/c2c-canonical-reconstruction-v1",
+  "sourceCommit": "fef1e4cb7afa38f27046c232b1a710c47e666a1f",
+  "nodeVersion": "v24.20.0",
+  "packageLockHash": "70df031d08ddc23feada47a7c8c820b12fb921874f2285f6a00367309d4fa5fb",
+  "buildCommand": "pnpm run build",
+  "buildTimestamp": "2026-09-10T03:48:27.613Z",
+  "distFileCount": 68,
+  "distSha256Manifest": [
+    {
+      "path": "dist/auth/html.js",
+      "sha256": "8107b332dee810bd581a45ff992303030138825bf3a19b394db3613e952f9278"
+    },
+    {
+      "path": "dist/auth/html.js.map",
+      "sha256": "39ea65549c7304bf37ee3851beb51da26b3d9a5e823aec26b8ba1a85716b9c23"
+    },
+    {
+      "path": "dist/auth/middleware.js",
+      "sha256": "b36a9775bd721832d47ed69240bcbf70a6c2813f47a5d587eeeb91e2460f67f7"
+    },
+    {
+      "path": "dist/auth/middleware.js.map",
+      "sha256": "c7b0483497dcc18f0ad607ddaddf37fb65c379c60622d308b208461384f0e6b2"
+    },
+    {
+      "path": "dist/auth/oauth.js",
+      "sha256": "e1655423fa7d8d0536576212a6f9b96d8243b8ac690c4cdad28647c092c07279"
+    },
+    {
+      "path": "dist/auth/oauth.js.map",
+      "sha256": "0272c8e1d81b09dfdc70ddc9ba07c898500464293338d30cd896170b6f265a77"
+    },
+    {
+      "path": "dist/auth/store.js",
+      "sha256": "ae43dd153f7501ff4edbead2dc1eada3dc221598c218a94bee1da0740a2b367d"
+    },
+    {
+      "path": "dist/auth/store.js.map",
+      "sha256": "0cc2013af5d903ce6f36a910983f6a8de7e40baae18d4930dc45861871cfdac0"
+    },
+    {
+      "path": "dist/bridge/runtime.js",
+      "sha256": "d1f01f7a59fc74be1682013c9dd66e20dbe9d6e51ca175b7c9266f8d050586be"
+    },
+    {
+      "path": "dist/bridge/runtime.js.map",
+      "sha256": "b0c388180cb9ba14728b5de3b7e8adea99253175750012082e2323e757104c10"
+    },
+    {
+      "path": "dist/bridge/server.js",
+      "sha256": "aa1dee469bf0590129c36994b8cf846b4ce07aaa2e82740ded598b78d78c3994"
+    },
+    {
+      "path": "dist/bridge/server.js.map",
+      "sha256": "98546d36d4e5c068830c5dd24b2c951199b37e1e7597e1443788a100bffda023"
+    },
+    {
+      "path": "dist/cli/index.js",
+      "sha256": "0695ae5c4e7ece0cc9e211870d83be6bb369b8799222db3bb6051005e34a102b"
+    },
+    {
+      "path": "dist/cli/index.js.map",
+      "sha256": "7f86a160cfe4862a4aeb263d566908b7ca30389d5d92a49ba6424e2c47bfb8a3"
+    },
+    {
+      "path": "dist/config/endpoint.js",
+      "sha256": "5b44bbdaf5541738b98f9680bbd70d7594d80e07c51aecd4256cdc56ffd48993"
+    },
+    {
+      "path": "dist/config/endpoint.js.map",
+      "sha256": "374ee0bdc67cefdff6fc32c9e3dbaa573d6d445bcb6dcdb3d8a342e15e22bd5a"
+    },
+    {
+      "path": "dist/config/paths.js",
+      "sha256": "c2bf4b5681b0ac35fe9178920a89e87d46c004dc059061dd8a7ec6356f2f2dcc"
+    },
+    {
+      "path": "dist/config/paths.js.map",
+      "sha256": "7bcb0526799a4d8739df44f133866e0f86c57656e61a807ad91be66242e76222"
+    },
+    {
+      "path": "dist/config/sandbox-allow.js",
+      "sha256": "8269cc451e5dfe3ae5aed4f2903705def1e26eb6ec75a80cb211f7cdf8e1d1f6"
+    },
+    {
+      "path": "dist/config/sandbox-allow.js.map",
+      "sha256": "079a56c8a12445c0a9a7a7b0bda5de7f0243bd8228bd5881aed6357b30d9bb67"
+    },
+    {
+      "path": "dist/config/ui-prefs.js",
+      "sha256": "2a38e75088ce7d73ca52f2ac97f505e86a4352776fe8f232f0b1788fd4105e2f"
+    },
+    {
+      "path": "dist/config/ui-prefs.js.map",
+      "sha256": "e0de28d95ad4c39d94a399fddbab7a31d57ca95fcc9ab1ada4fd873e67f806b1"
+    },
+    {
+      "path": "dist/execution/output.js",
+      "sha256": "3f5c2c1df71aea6e77237bba9514056e4772aa8d38e042e1d4c789a93e89ca4b"
+    },
+    {
+      "path": "dist/execution/output.js.map",
+      "sha256": "4cdd673bd3257c33ed1412a9cae163de7b3d43a02c115a734deca33047694bce"
+    },
+    {
+      "path": "dist/execution/records.js",
+      "sha256": "4a4a08abea29e113333e7bc0fc95d0575ed549e88ba3728598da9d0e5f01847c"
+    },
+    {
+      "path": "dist/execution/records.js.map",
+      "sha256": "74a588c3b0a05e6211ce1ae1c6be625acbe3501c661db0523a83dd6403cba2aa"
+    },
+    {
+      "path": "dist/execution/sanitize.js",
+      "sha256": "33e466a4bad13ebe0b7f63c44576f291383fed5e8db5b8e52c0a7ebde84bcaf5"
+    },
+    {
+      "path": "dist/execution/sanitize.js.map",
+      "sha256": "b0928b9034ca21f71396a4453a63ba2f5feab2441999fb47aa43fbeda2d63b09"
+    },
+    {
+      "path": "dist/logger/index.js",
+      "sha256": "6917c3e36d2e07ed1523fbfa422aef89946aae9e081d3c3f8262d6df0747dde6"
+    },
+    {
+      "path": "dist/logger/index.js.map",
+      "sha256": "362dca572d6211fdf5db7b4a5c346bbdf99a48a4b431da32a52d557ce5cf2dda"
+    },
+    {
+      "path": "dist/mcp/http.js",
+      "sha256": "4ffa97f9510446d053204db4f45b440c15783dc6779301b530693e5ba57046e2"
+    },
+    {
+      "path": "dist/mcp/http.js.map",
+      "sha256": "68b98cf51c1580615096aba5fbc642e71c8b82a4629a1ff103ba0196506a5d69"
+    },
+    {
+      "path": "dist/mcp/server.js",
+      "sha256": "a090df05cc91d27348e1e9f5e6211bca62ebde630d394ba85e9eefeabff40630"
+    },
+    {
+      "path": "dist/mcp/server.js.map",
+      "sha256": "2bad6a8cd6015f61d484ae43634abdab58d6579894d68da142b5a96e8d277025"
+    },
+    {
+      "path": "dist/pairing/manager.js",
+      "sha256": "089987bfc8bdf72b38bb8133814720450f41b15324024e4b49fef3f79e738e20"
+    },
+    {
+      "path": "dist/pairing/manager.js.map",
+      "sha256": "1bd03a9b1081348e76096dcb1f85318f0d7260fd9859bcd8052bd700d7adf5f1"
+    },
+    {
+      "path": "dist/process/cutover-contract.js",
+      "sha256": "554dacac9fd2b69fa14414700575cc48e5807d2c35009e6e295c6971581cd1d5"
+    },
+    {
+      "path": "dist/process/cutover-contract.js.map",
+      "sha256": "bfe6facf7cccc7eb759aa4cc1ccd9e6e420400cadb93eeb9bd01084f2c8ca87a"
+    },
+    {
+      "path": "dist/process/daemon.js",
+      "sha256": "5fdb2a6fb2c5ecd83d88c57addda6070ea1c78b1cff324744d18b8718ced16d7"
+    },
+    {
+      "path": "dist/process/daemon.js.map",
+      "sha256": "58ecb7a86a8e3c76b37d4029b9aac12dcf0fdc61b9d4237a2c7eebacc9b98cbb"
+    },
+    {
+      "path": "dist/session/state.js",
+      "sha256": "c0e466b64f68a32b1a2998ed55ff45ac781c4c7c6831b2eaaeb90c62e98d9381"
+    },
+    {
+      "path": "dist/session/state.js.map",
+      "sha256": "04bf416d3f6acc39c35798db7308132e981afbb8a609d90753d6dcd327be2226"
+    },
+    {
+      "path": "dist/tunnel/cloudflared-named.js",
+      "sha256": "4383ce5be51b2f0f1fa005d739959b56dd2dacdca4b929fe7496636b4b65eada"
+    },
+    {
+      "path": "dist/tunnel/cloudflared-named.js.map",
+      "sha256": "ac70fd066d822262f423fc5209466bd51e0196855426b8608c8197121109b7b3"
+    },
+    {
+      "path": "dist/tunnel/cloudflared.js",
+      "sha256": "134ce3056b07393314edfb083a77259502a5a4aa52edd2c507bc5a6691085f6e"
+    },
+    {
+      "path": "dist/tunnel/cloudflared.js.map",
+      "sha256": "77644fba7392a4a17322587f375cba3940f1b6adbd57432d922e09917d8df167"
+    },
+    {
+      "path": "dist/tunnel/detect.js",
+      "sha256": "c2f2ff532d33b34b08732838c54e4e4fc0b4b9af402fd222bbb8c5a6d07bbcae"
+    },
+    {
+      "path": "dist/tunnel/detect.js.map",
+      "sha256": "c41e764e90f03cc47656a606fc4550dd8725573811a0a158a94947faeed44d51"
+    },
+    {
+      "path": "dist/tunnel/hostname.js",
+      "sha256": "bd95a8f06329e223c2d49ce9c13ae038e71a35c6c69d9b1e99a06d361ee016fc"
+    },
+    {
+      "path": "dist/tunnel/hostname.js.map",
+      "sha256": "8f0606a3f6a7766b71f004122e5735a1d07325b8029217ce491a22eefe379b4c"
+    },
+    {
+      "path": "dist/tunnel/named-provision.js",
+      "sha256": "da193ab19597a4fd30f2908ae061459087f2bb75d81e124713dba815b997083c"
+    },
+    {
+      "path": "dist/tunnel/named-provision.js.map",
+      "sha256": "d65e834b75aa5cdc65c9387b01354c35a5b54b21ee6770b758acaec856cc81d5"
+    },
+    {
+      "path": "dist/tunnel/provider.js",
+      "sha256": "3d25c1828cd404f9d81e3b7223f6198cf7919836d8be57289a7001c2fc6661d0"
+    },
+    {
+      "path": "dist/tunnel/provider.js.map",
+      "sha256": "2ee4de316169db3d40c99de2fd4fe34efd5a62dfcb6950dddecffe5babafb6b7"
+    },
+    {
+      "path": "dist/tunnel/state.js",
+      "sha256": "5bef266126ac62c37a9550dcb3af556e66449b896f4d01cec8707f1ff98cb7c7"
+    },
+    {
+      "path": "dist/tunnel/state.js.map",
+      "sha256": "6685b573d80fe0e4d26bf58e1cdb1c9d6504271ca515065ce524c62068cd6c9e"
+    },
+    {
+      "path": "dist/version.js",
+      "sha256": "49ce9fd58bc0e9278c65da6d6a644f08bd37a0dadf618e6a081b53385f9b0f11"
+    },
+    {
+      "path": "dist/version.js.map",
+      "sha256": "92e494f305503396089939915adbd8c480608e12f1385077bcff8509dce5b1a6"
+    },
+    {
+      "path": "dist/workspace/git.js",
+      "sha256": "89577c1f1f0dfd0215b2d1e608c147a761c85a8076fd1c02b65a08c7032db59b"
+    },
+    {
+      "path": "dist/workspace/git.js.map",
+      "sha256": "e370fc3b0508c2a1a526362f2fa2772b44597a8051c2b138511d0a0b94e6f5a0"
+    },
+    {
+      "path": "dist/workspace/ignore.js",
+      "sha256": "3308f2b366d9d666872e0ebf7e8658932df1b630b9d8ebac3cf835b1348db060"
+    },
+    {
+      "path": "dist/workspace/ignore.js.map",
+      "sha256": "f0d34350259a0d5b3b7d87bdca4a47b2f93f23bc80f5422729f87a911fde517b"
+    },
+    {
+      "path": "dist/workspace/manager.js",
+      "sha256": "50f6f53a19da381add40fec149f5c49ecaa9300d061d5e6b76dfe8145736f09c"
+    },
+    {
+      "path": "dist/workspace/manager.js.map",
+      "sha256": "b781aa14a5577987e60fdf11df94c014c2e68229bcebab2674a272d518905212"
+    },
+    {
+      "path": "dist/workspace/registry.js",
+      "sha256": "0f0483f4d9380bdfadc023302748807fb714370e9f3222305e9004325ef19dda"
+    },
+    {
+      "path": "dist/workspace/registry.js.map",
+      "sha256": "78f37c596bce355a89a4e9deab1ea2320d1a0f4c7a197065de29e6a1fa1dbc9c"
+    },
+    {
+      "path": "dist/workspace/search.js",
+      "sha256": "c37e3b74a44f799bc48ae027e23bb4668a5d3b037726a364933a5703d27344f7"
+    },
+    {
+      "path": "dist/workspace/search.js.map",
+      "sha256": "45ab040edd30d65a375fce5d3c8f5f03135c3cbabb35a2f8d2d6d80b8a695e0c"
+    }
+  ],
+  "testResult": "PASS",
+  "deploymentTarget": "UNSET — this reconstruction is not production",
+  "historicalR3SourceCommit": "UNKNOWN"
+}
