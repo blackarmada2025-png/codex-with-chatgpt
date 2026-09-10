@@ -12,6 +12,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:manifest": "pnpm run build && node scripts/generate-build-manifest.mjs",
     "dev": "tsx src/cli/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",

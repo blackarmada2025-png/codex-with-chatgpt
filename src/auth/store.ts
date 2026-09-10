@@ -92,6 +92,8 @@ export class AuthStore {
   }
 
   private load(): void {
+    this.clients.clear();
+    this.tokens.clear();
     const data = readJsonIfExists<PersistedAuthState>(this.file);
     if (!data) return;
     const now = Date.now();
@@ -101,13 +103,56 @@ export class AuthStore {
     }
   }
 
-  private save(): void {
+  /**
+   * Serializes a persisted-state mutation across gateway processes. The lock
+   * is deliberately adjacent to the store so a deployment can preserve both
+   * the state file and its coordination boundary together.
+   */
+  private withFileLock<T>(operation: () => T): T {
+    const lock = `${this.file}.lock`;
+    ensureDir(path.dirname(lock));
+    const deadline = Date.now() + 5_000;
+    let handle: number | undefined;
+    while (handle === undefined) {
+      try {
+        handle = fs.openSync(lock, "wx", 0o600);
+      } catch (error: unknown) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST" || Date.now() >= deadline) {
+          throw new Error(`AuthStore lock unavailable: ${lock}`);
+        }
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10);
+      }
+    }
+    try {
+      return operation();
+    } finally {
+      fs.closeSync(handle);
+      try {
+        fs.rmSync(lock, { force: true });
+      } catch {
+        // The next writer will time out safely if the filesystem refuses cleanup.
+      }
+    }
+  }
+
+  private saveUnlocked(): void {
     const now = Date.now();
     const state: PersistedAuthState = {
       clients: [...this.clients.values()],
       tokens: [...this.tokens.values()].filter((t) => !t.revoked && t.expiresAt > now),
     };
     writeSecureJson(this.file, state);
+  }
+
+  private mutate<T>(operation: () => T): T {
+    return this.withFileLock(() => {
+      // Re-read after acquiring the lock so a stale process cannot overwrite a
+      // client or token created by another gateway process.
+      this.load();
+      const result = operation();
+      this.saveUnlocked();
+      return result;
+    });
   }
 
   // ---- Dynamic Client Registration -------------------------------------
@@ -119,9 +164,10 @@ export class AuthStore {
       redirectUris: input.redirectUris,
       createdAt: new Date().toISOString(),
     };
-    this.clients.set(client.clientId, client);
-    this.save();
-    return client;
+    return this.mutate(() => {
+      this.clients.set(client.clientId, client);
+      return client;
+    });
   }
 
   getClient(clientId: string): ClientRegistration | undefined {
@@ -164,7 +210,7 @@ export class AuthStore {
 
   // ---- Tokens -------------------------------------------------------------
 
-  issueTokens(input: {
+  private issueTokensUnlocked(input: {
     clientId: string;
     scopes: string[];
     workspaceId?: string;
@@ -200,13 +246,21 @@ export class AuthStore {
         revoked: false,
       });
     }
-    this.save();
     return {
       accessToken,
       refreshToken,
       expiresIn: Math.floor(accessTtl / 1000),
       scopes: input.scopes,
     };
+  }
+
+  issueTokens(input: {
+    clientId: string;
+    scopes: string[];
+    workspaceId?: string;
+    accessTtlMs?: number;
+  }): { accessToken: string; refreshToken: string | null; expiresIn: number; scopes: string[] } {
+    return this.mutate(() => this.issueTokensUnlocked(input));
   }
 
   verifyAccessToken(token: string): VerifyTokenResult {
@@ -223,37 +277,38 @@ export class AuthStore {
     refreshToken: string,
     clientId: string
   ): { ok: true; tokens: ReturnType<AuthStore["issueTokens"]> } | { ok: false; reason: string } {
-    const record = this.tokens.get(sha256hex(refreshToken));
-    if (!record || record.kind !== "refresh") return { ok: false, reason: "invalid_grant" };
-    if (record.revoked) return { ok: false, reason: "invalid_grant" };
-    if (Date.now() > record.expiresAt) return { ok: false, reason: "invalid_grant" };
-    if (record.clientId !== clientId) return { ok: false, reason: "invalid_client" };
-    record.revoked = true;
-    this.tokens.delete(record.hash);
-    const tokens = this.issueTokens({
-      clientId,
-      scopes: record.scopes,
-      workspaceId: record.workspaceId,
+    return this.mutate(() => {
+      const record = this.tokens.get(sha256hex(refreshToken));
+      if (!record || record.kind !== "refresh") return { ok: false as const, reason: "invalid_grant" };
+      if (record.revoked || Date.now() > record.expiresAt) return { ok: false as const, reason: "invalid_grant" };
+      if (record.clientId !== clientId) return { ok: false as const, reason: "invalid_client" };
+      this.tokens.delete(record.hash);
+      const tokens = this.issueTokensUnlocked({
+        clientId,
+        scopes: record.scopes,
+        workspaceId: record.workspaceId,
+      });
+      return { ok: true as const, tokens };
     });
-    return { ok: true, tokens };
   }
 
   revokeToken(token: string): boolean {
-    const record = this.tokens.get(sha256hex(token));
-    if (!record) return false;
-    record.revoked = true;
-    this.tokens.delete(record.hash);
-    this.save();
-    return true;
+    return this.mutate(() => {
+      const record = this.tokens.get(sha256hex(token));
+      if (!record) return false;
+      this.tokens.delete(record.hash);
+      return true;
+    });
   }
 
   /** Used by `c2c unpair`: revoke everything for this workspace. */
   revokeAll(): number {
-    const count = this.tokens.size;
-    this.tokens.clear();
-    this.authCodes.clear();
-    this.save();
-    return count;
+    return this.mutate(() => {
+      const count = this.tokens.size;
+      this.tokens.clear();
+      this.authCodes.clear();
+      return count;
+    });
   }
 
   tokenCount(): number {
