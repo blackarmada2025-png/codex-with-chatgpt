@@ -39,12 +39,22 @@ const runtimeEntryPoints = {
   zod: "zod",
 };
 const deployedRequire = createRequire(path.join(output, "package.json"));
+function resolvePackageJson(entryPoint) {
+  let directory = path.dirname(deployedRequire.resolve(entryPoint));
+  while (directory.startsWith(output)) {
+    const candidate = path.join(directory, "package.json");
+    if (fs.existsSync(candidate)) return candidate;
+    directory = path.dirname(directory);
+  }
+  throw new Error(`package.json is not reachable from ${entryPoint}`);
+}
 const runtimeDependencies = Object.entries(runtimeEntryPoints).map(([name, entryPoint]) => {
-  const packageJsonPath = deployedRequire.resolve(`${name}/package.json`);
+  const resolvedEntryPoint = deployedRequire.resolve(entryPoint);
+  const packageJsonPath = resolvePackageJson(entryPoint);
   return {
     name,
     entryPoint,
-    resolvedEntryPoint: deployedRequire.resolve(entryPoint),
+    resolvedEntryPoint,
     version: JSON.parse(fs.readFileSync(packageJsonPath, "utf8")).version,
   };
 });
