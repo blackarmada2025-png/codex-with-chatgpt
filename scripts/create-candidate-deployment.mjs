@@ -26,6 +26,7 @@ fs.mkdirSync(path.dirname(output), { recursive: true });
 execFileSync(pnpm, ["--filter", packageMetadata.name, "deploy", "--prod", "--legacy", output], {
   cwd: root,
   stdio: "inherit",
+  shell: process.platform === "win32",
 });
 fs.cpSync(dist, path.join(output, "dist"), { recursive: true });
 fs.copyFileSync(lockfile, path.join(output, "pnpm-lock.yaml"));
