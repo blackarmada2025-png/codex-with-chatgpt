@@ -26,7 +26,7 @@ fs.mkdirSync(output, { recursive: true });
 fs.copyFileSync(packageJson, path.join(output, "package.json"));
 fs.copyFileSync(lockfile, path.join(output, "pnpm-lock.yaml"));
 fs.cpSync(dist, path.join(output, "dist"), { recursive: true });
-execFileSync(pnpm, ["install", "--prod", "--frozen-lockfile", "--dir", output], {
+execFileSync(pnpm, ["--config.node-linker=hoisted", "install", "--prod", "--frozen-lockfile", "--dir", output], {
   cwd: root,
   stdio: "inherit",
   shell: process.platform === "win32",
@@ -68,7 +68,7 @@ execFileSync(process.execPath, [manifestGenerator, "--require-clean-head", "--te
 const manifestPath = path.join(output, "build-manifest.json");
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 manifest.deploymentRuntimeDependencyClosure = {
-  deploymentMethod: "pnpm install --prod --frozen-lockfile --dir <candidate>",
+  deploymentMethod: "pnpm --config.node-linker=hoisted install --prod --frozen-lockfile --dir <candidate>",
   packageJsonSha256: hash(path.join(output, "package.json")),
   lockfileSha256: hash(path.join(output, "pnpm-lock.yaml")),
   directDependencies: runtimeDependencies,
