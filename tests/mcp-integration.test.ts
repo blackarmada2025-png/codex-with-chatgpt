@@ -162,11 +162,22 @@ describe("MCP tools over Streamable HTTP", () => {
       tests: "27 passed",
       exitStatus: "ok",
       timestamp: new Date().toISOString(),
+      reusableEvidenceReceipt: {
+        objectIdentity: "object",
+        objectHashOrVersion: "hash",
+        validationType: "contract",
+        result: "PASS",
+        scope: "scope",
+        environment: "isolated-test",
+        timestamp: "2026-09-11T00:00:00.000Z",
+        evidenceReference: "validation:1",
+      },
     });
-    const summary = jsonOf<{ records: { taskId: string }[] }>(
+    const summary = jsonOf<{ records: { taskId: string; reusableEvidenceReceipt?: { evidenceReference: string } }[] }>(
       await client.callTool({ name: "execution_summary", arguments: {} })
     );
     expect(summary.records[0].taskId).toBe("c2c_test1");
+    expect(summary.records[0].reusableEvidenceReceipt?.evidenceReference).toBe("validation:1");
 
     const status = jsonOf<{ available: boolean; tests: string; outputAvailable: boolean; outputId: number | null }>(
       await client.callTool({ name: "test_status", arguments: {} })

@@ -55,6 +55,7 @@ import {
   type WaitingFor,
 } from "../session/state.js";
 import { appendExecutionRecord } from "../execution/records.js";
+import { createReusableEvidenceReceipt } from "../execution/evidence-receipt.js";
 import { saveExecutionOutput } from "../execution/output.js";
 
 const program = new Command();
@@ -1057,6 +1058,12 @@ program
   .option("--native-thread <id>", "native Codex thread ID that produced this result")
   .option("--native-result-turn <id>", "native turn ID for this result")
   .option("--native-result-message <id>", "native final result message ID")
+  .option("--receipt-object-identity <value>", "validated object identity")
+  .option("--receipt-object-hash <value>", "validated object hash or version")
+  .option("--receipt-validation-type <value>", "exact validation contract")
+  .option("--receipt-scope <value>", "validated scope")
+  .option("--receipt-environment <value>", "validation environment or surface")
+  .option("--receipt-reference <value>", "sanitized evidence reference")
   .action(
     (opts: {
       workspace?: string;
@@ -1073,6 +1080,12 @@ program
       nativeThread?: string;
       nativeResultTurn?: string;
       nativeResultMessage?: string;
+      receiptObjectIdentity?: string;
+      receiptObjectHash?: string;
+      receiptValidationType?: string;
+      receiptScope?: string;
+      receiptEnvironment?: string;
+      receiptReference?: string;
     }) => {
       const workspace = new Workspace(resolveWorkspace(opts.workspace));
       const changed = /^\d+$/.test(opts.changedFiles)
@@ -1095,13 +1108,37 @@ program
         outputId = savedOutput.id;
         outputAvailable = savedOutput.allowed;
       }
+      const timestamp = new Date().toISOString();
+      const receiptValues = [
+        opts.receiptObjectIdentity,
+        opts.receiptObjectHash,
+        opts.receiptValidationType,
+        opts.receiptScope,
+        opts.receiptEnvironment,
+        opts.receiptReference,
+      ];
+      const receiptRequested = receiptValues.some((value) => value !== undefined);
+      const reusableEvidenceReceipt = createReusableEvidenceReceipt(
+        {
+          objectIdentity: opts.receiptObjectIdentity,
+          objectHashOrVersion: opts.receiptObjectHash,
+          validationType: opts.receiptValidationType,
+          scope: opts.receiptScope,
+          environment: opts.receiptEnvironment,
+        },
+        timestamp,
+        opts.receiptReference ?? ""
+      );
+      if (receiptRequested && !reusableEvidenceReceipt) {
+        throw new Error("receipt requires object identity, hash, validation type, scope, environment, and reference");
+      }
       appendExecutionRecord(workspace.id, {
         taskId: opts.task,
         iteration: parseInt(opts.iteration, 10),
         changedFiles: changed,
         tests: opts.tests ?? null,
         exitStatus: opts.exitStatus,
-        timestamp: new Date().toISOString(),
+        timestamp,
         notes: opts.notes?.slice(0, 400),
         outputId,
         outputAvailable,
@@ -1110,6 +1147,7 @@ program
           opts.nativeResultTurn || opts.nativeResultMessage
             ? { turnId: opts.nativeResultTurn, messageId: opts.nativeResultMessage }
             : undefined,
+        reusableEvidenceReceipt: reusableEvidenceReceipt ?? undefined,
       });
       if (outputId !== undefined && !outputAvailable) check("已记录执行摘要（输出未对 ChatGPT 开放）");
       else if (outputId !== undefined) check("已记录执行摘要与输出");

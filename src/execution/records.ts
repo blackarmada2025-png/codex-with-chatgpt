@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { ensureDir, getStateDir } from "../config/paths.js";
+import type { ReusableEvidenceReceipt } from "./evidence-receipt.js";
 
 /**
  * Lightweight execution records written by the Codex harness after each
@@ -25,6 +26,8 @@ export interface ExecutionRecord {
     turnId?: string;
     messageId?: string;
   };
+  /** Passed validation evidence that may be reused only through an exact, safe decision. */
+  reusableEvidenceReceipt?: ReusableEvidenceReceipt;
 }
 
 function recordsFile(workspaceId: string): string {
