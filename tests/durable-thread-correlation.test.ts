@@ -9,7 +9,13 @@ const WORKSPACE_ID = "f7c6958b80ed";
 const TASK_ID = "c2c_native_acceptance";
 const THREAD_ID = "01a08fba-3534-7461-8810-3e51e8812f94";
 const TURN_ID = "01a08fbf-0f32-7bf0-805c-77aaaf479348";
-const MESSAGE_ID = "msg_053459cb970a52c3016aa3c5c66d846c87d099c913cb460043e3";
+const MESSAGE_ID = "msg_053459cb970a52c3016aa3c66d846c87d099c913cb460043e3";
+
+const nativeResultReferenceExactMatch = (
+  stored: { turnId?: string; messageId?: string } | undefined,
+  actual: { turnId: string; messageId: string }
+): boolean =>
+  stored?.turnId === actual.turnId && stored?.messageId === actual.messageId;
 
 describe("durable native thread correlation", () => {
   const dirs: string[] = [];
@@ -75,5 +81,36 @@ describe("durable native thread correlation", () => {
     const [record] = readExecutionRecords(WORKSPACE_ID);
     expect(record?.nativeThreadId).toBe(THREAD_ID);
     expect(record?.nativeResultReference).toEqual({ turnId: TURN_ID, messageId: MESSAGE_ID });
+    expect(nativeResultReferenceExactMatch(record?.nativeResultReference, { turnId: TURN_ID, messageId: MESSAGE_ID })).toBe(true);
+  });
+
+  it("requires exact native turn and message identifiers for result recovery", () => {
+    const actual = { turnId: TURN_ID, messageId: MESSAGE_ID };
+
+    expect(nativeResultReferenceExactMatch({ turnId: TURN_ID, messageId: MESSAGE_ID }, actual)).toBe(true);
+    expect(nativeResultReferenceExactMatch({ turnId: TURN_ID, messageId: `${MESSAGE_ID}x` }, actual)).toBe(false);
+    expect(nativeResultReferenceExactMatch({ turnId: `${TURN_ID}x`, messageId: MESSAGE_ID }, actual)).toBe(false);
+  });
+
+  it("does not treat durable metadata roundtrip as result-reference validation", () => {
+    const stateDir = isolateStateDir();
+    dirs.push(stateDir);
+    const actual = { turnId: TURN_ID, messageId: MESSAGE_ID };
+    const mismatchedReference = { turnId: TURN_ID, messageId: `${MESSAGE_ID}x` };
+
+    appendExecutionRecord(WORKSPACE_ID, {
+      taskId: TASK_ID,
+      iteration: 1,
+      changedFiles: 0,
+      tests: "reference mismatch",
+      exitStatus: "ok",
+      timestamp: "2026-09-11T00:00:00.000Z",
+      nativeThreadId: THREAD_ID,
+      nativeResultReference: mismatchedReference,
+    });
+
+    const [record] = readExecutionRecords(WORKSPACE_ID);
+    expect(record?.nativeResultReference).toEqual(mismatchedReference);
+    expect(nativeResultReferenceExactMatch(record?.nativeResultReference, actual)).toBe(false);
   });
 });
