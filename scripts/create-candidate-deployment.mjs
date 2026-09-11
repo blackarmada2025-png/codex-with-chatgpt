@@ -22,14 +22,15 @@ if (git("status", "--porcelain")) throw new Error("clean HEAD is required for a 
 if (!fs.existsSync(dist)) throw new Error("dist is missing; run the build first");
 if (fs.existsSync(output)) throw new Error(`candidate deployment already exists: ${output}`);
 
-fs.mkdirSync(path.dirname(output), { recursive: true });
-execFileSync(pnpm, ["--filter", packageMetadata.name, "deploy", "--prod", "--legacy", output], {
+fs.mkdirSync(output, { recursive: true });
+fs.copyFileSync(packageJson, path.join(output, "package.json"));
+fs.copyFileSync(lockfile, path.join(output, "pnpm-lock.yaml"));
+fs.cpSync(dist, path.join(output, "dist"), { recursive: true });
+execFileSync(pnpm, ["install", "--prod", "--frozen-lockfile", "--dir", output], {
   cwd: root,
   stdio: "inherit",
   shell: process.platform === "win32",
 });
-fs.cpSync(dist, path.join(output, "dist"), { recursive: true });
-fs.copyFileSync(lockfile, path.join(output, "pnpm-lock.yaml"));
 
 const runtimeEntryPoints = {
   commander: "commander",
@@ -67,7 +68,7 @@ execFileSync(process.execPath, [manifestGenerator, "--require-clean-head", "--te
 const manifestPath = path.join(output, "build-manifest.json");
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 manifest.deploymentRuntimeDependencyClosure = {
-  deploymentMethod: "pnpm deploy --prod --legacy",
+  deploymentMethod: "pnpm install --prod --frozen-lockfile --dir <candidate>",
   packageJsonSha256: hash(path.join(output, "package.json")),
   lockfileSha256: hash(path.join(output, "pnpm-lock.yaml")),
   directDependencies: runtimeDependencies,
