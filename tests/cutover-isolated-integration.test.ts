@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
@@ -52,6 +53,10 @@ function isAlive(pid: number): boolean {
   try { process.kill(pid, 0); return true; } catch { return false; }
 }
 
+function sha256(file: string): string {
+  return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+}
+
 function ps(value: string): string { return `'${value.replace(/'/g, "''")}'`; }
 
 function runPowerShell(script: string) {
@@ -60,7 +65,7 @@ function runPowerShell(script: string) {
 }
 
 function registerIsolatedWatchdog(taskName: string, runtimeScript: string, runtimeConfig: string) {
-  const argumentsValue = `-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${runtimeScript}\" -ConfigPath \"${runtimeConfig}\" -IsolatedTestMode`;
+  const argumentsValue = `-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"${runtimeScript}\" -IsolatedTestMode`;
   let result: ReturnType<typeof runPowerShell> | undefined;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     result = runPowerShell(`$action=New-ScheduledTaskAction -Execute 'powershell.exe' -Argument ${ps(argumentsValue)}; Register-ScheduledTask -TaskName ${ps(taskName)} -Action $action -Force | Out-Null; Start-ScheduledTask -TaskName ${ps(taskName)}`);
@@ -73,7 +78,7 @@ function registerIsolatedWatchdog(taskName: string, runtimeScript: string, runti
 }
 
 function watchdogPid(runtimeScript: string, runtimeConfig: string): number {
-  const result = runPowerShell(`$p=Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(?i:powershell|pwsh)\\.exe$' -and $_.CommandLine -like '*${runtimeScript.replace(/'/g, "''")}*' -and $_.CommandLine -like '*${runtimeConfig.replace(/'/g, "''")}*' } | Select-Object -First 1 -ExpandProperty ProcessId; $p`);
+  const result = runPowerShell(`$p=Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(?i:powershell|pwsh)\\.exe$' -and $_.CommandLine -like '*${runtimeScript.replace(/'/g, "''")}*' -and ($_.CommandLine -like '*${runtimeConfig.replace(/'/g, "''")}*' -or $_.CommandLine -notmatch '(?i)(?:^|\\s)-ConfigPath(?:\\s|$)') } | Select-Object -First 1 -ExpandProperty ProcessId; $p`);
   expect(result.status, result.stderr).toBe(0);
   return Number(result.stdout.trim());
 }
@@ -127,10 +132,12 @@ async function fixture(hostname = "127.0.0.1:1") {
   fs.writeFileSync(path.join(runtime, "c2c-production-watchdog.config.json"), JSON.stringify(config));
   const runtimeScript = path.join(runtime, "orbnexa-vault-c2c-prod-watchdog.ps1");
   const runtimeConfig = path.join(runtime, "c2c-production-watchdog.config.json");
+  const preWatchdogScriptHash = sha256(runtimeScript);
+  const preWatchdogConfigHash = sha256(runtimeConfig);
   const taskName = `C2C-Isolated-Watchdog-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   registerIsolatedWatchdog(taskName, runtimeScript, runtimeConfig);
   const initialWatchdogPid = await waitForWatchdog(runtimeScript, runtimeConfig);
-  return { auth, formalAuth, legacyRuntimeFile, oldCli, oldPid: oldRuntime.pid, port, runtime, runtimeConfig, runtimeFile, runtimeScript, state, legacyState, workspace: workspaceRoot, workspaceId: start.workspaceId, taskName, initialWatchdogPid };
+  return { auth, formalAuth, legacyRuntimeFile, oldCli, oldPid: oldRuntime.pid, port, runtime, runtimeConfig, runtimeFile, runtimeScript, state, legacyState, workspace: workspaceRoot, workspaceId: start.workspaceId, taskName, initialWatchdogPid, preWatchdogScriptHash, preWatchdogConfigHash };
 }
 
 function args(f: Awaited<ReturnType<typeof fixture>>, simulate = false) {
@@ -153,6 +160,7 @@ describe("isolated production cutover execution path", () => {
     expect(adoptedWatchdogPid).not.toBe(f.initialWatchdogPid);
     expect((await fetch(`http://127.0.0.1:${f.port}/health`)).ok).toBe(true);
     expect(fs.readFileSync(f.auth, "utf8")).toBe(before);
+    expect(sha256(f.runtimeScript)).toBe(sha256(watchdog));
     const installed = JSON.parse(fs.readFileSync(path.join(f.runtime, "c2c-production-watchdog.config.json"), "utf8").replace(/^\uFEFF/, ""));
     expect(installed).toMatchObject({ gatewayCli: candidateCli, c2cStateDir: f.state, workspaceId: f.workspaceId, requiredPort: f.port, hostname: "127.0.0.1:1" });
   }, 90_000);
@@ -173,6 +181,8 @@ describe("isolated production cutover execution path", () => {
     expect(fs.readFileSync(f.auth, "utf8")).toBe(before);
     const restoredConfig = JSON.parse(fs.readFileSync(f.runtimeConfig, "utf8").replace(/^\uFEFF/, ""));
     expect(restoredConfig.gatewayCli).toBe(f.oldCli);
+    expect(sha256(f.runtimeScript)).toBe(f.preWatchdogScriptHash);
+    expect(sha256(f.runtimeConfig)).toBe(f.preWatchdogConfigHash);
   }, 90_000);
 
   it("has no runtime side effect when isolated preflight fails", () => {
