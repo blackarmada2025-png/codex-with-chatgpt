@@ -33,6 +33,7 @@ const productionCriticalFiles = [
   "ops/watchdog/c2c-production-watchdog.ps1",
   "ops/watchdog/c2c-production-watchdog.config.example.json",
   "scripts/install-production-watchdog.ps1",
+  "scripts/create-candidate-deployment.mjs",
   "scripts/generate-build-manifest.mjs",
 ].map((relative) => {
   const file = path.join(root, relative);
@@ -44,6 +45,7 @@ const releaseCriticalFiles = [
   "ops/watchdog/c2c-production-watchdog.ps1",
   "ops/watchdog/c2c-production-watchdog.config.example.json",
   "scripts/install-production-watchdog.ps1",
+  "scripts/create-candidate-deployment.mjs",
   "scripts/generate-build-manifest.mjs",
   "tests/cutover-isolated-integration.test.ts",
   "tests/scheduled-task-control-plane.probe.ps1",
@@ -55,12 +57,19 @@ const releaseCriticalFiles = [
 const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 if (requireCleanHead && git("status", "--porcelain")) throw new Error("clean HEAD is required for a release manifest");
 const lockfile = path.join(root, "pnpm-lock.yaml");
+const packageJson = path.join(root, "package.json");
+const packageMetadata = JSON.parse(fs.readFileSync(packageJson, "utf8"));
 const manifest = {
   sourceRemote: git("remote", "get-url", "origin"),
   sourceBranch: git("branch", "--show-current") || "DETACHED",
   sourceCommit: git("rev-parse", "HEAD"),
   nodeVersion: process.version,
   packageLockHash: hash(lockfile),
+  runtimeDependencyProvenance: {
+    packageJsonSha256: hash(packageJson),
+    lockfileSha256: hash(lockfile),
+    directDependencies: packageMetadata.dependencies ?? {},
+  },
   buildCommand: "pnpm run build",
   buildTimestamp: new Date().toISOString(),
   distFileCount: relativeFiles.length,
