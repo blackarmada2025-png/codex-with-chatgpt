@@ -34,6 +34,10 @@ export interface TaskCheckpoint {
   iteration: number;
   protocolState: ProtocolState;
   waitingFor: WaitingFor;
+  /** Native Codex thread that executes this C2C task, when one was delegated. */
+  nativeThreadId?: string;
+  /** Native execution worktree; context only, never an identity key. */
+  nativeWorktreePath?: string;
   originalGoal?: string;
   completedSubtasks?: string;
   knownIssues?: string;
@@ -228,6 +232,8 @@ export function mergeSession(previous: SavedSession | null, patch: SessionPatch)
       iteration,
       protocolState,
       waitingFor,
+      nativeThreadId: patch.checkpoint.nativeThreadId ?? previous?.checkpoint?.nativeThreadId,
+      nativeWorktreePath: patch.checkpoint.nativeWorktreePath ?? previous?.checkpoint?.nativeWorktreePath,
       originalGoal: capCheckpointText(
         patch.checkpoint.originalGoal ?? previous?.checkpoint?.originalGoal,
         CHECKPOINT_LIMITS.originalGoal

@@ -899,6 +899,8 @@ session
   .option("--connector-name <name>", "exact connector title for this workspace")
   .option("--protocol-state <state>", "checkpoint protocol state, e.g. EXECUTED_SENT")
   .option("--waiting-for <who>", "none | GPT_PLAN | GPT_REVIEW | USER")
+  .option("--native-thread <id>", "native Codex thread ID for this C2C task")
+  .option("--native-worktree <path>", "native execution worktree path (context only)")
   .option("--goal <text>", "original task goal for resume / HANDOFF")
   .option("--completed-subtasks <text>")
   .option("--known-issues <text>")
@@ -917,6 +919,8 @@ session
       connectorName?: string;
       protocolState?: string;
       waitingFor?: string;
+      nativeThread?: string;
+      nativeWorktree?: string;
       goal?: string;
       completedSubtasks?: string;
       knownIssues?: string;
@@ -955,6 +959,8 @@ session
           ? {
               protocolState: protocolRaw as ProtocolState,
               waitingFor: (waitingNorm as WaitingFor | undefined) ?? undefined,
+              nativeThreadId: opts.nativeThread,
+              nativeWorktreePath: opts.nativeWorktree,
               originalGoal: opts.goal,
               completedSubtasks: opts.completedSubtasks,
               knownIssues: opts.knownIssues,
@@ -1048,6 +1054,9 @@ program
   .option("--output <text>", "command output (prefer --output-file for long logs)")
   .option("--output-file <path>", "read command output from a local file")
   .option("--exit-code <n>", "numeric exit code of that command")
+  .option("--native-thread <id>", "native Codex thread ID that produced this result")
+  .option("--native-result-turn <id>", "native turn ID for this result")
+  .option("--native-result-message <id>", "native final result message ID")
   .action(
     (opts: {
       workspace?: string;
@@ -1061,6 +1070,9 @@ program
       output?: string;
       outputFile?: string;
       exitCode?: string;
+      nativeThread?: string;
+      nativeResultTurn?: string;
+      nativeResultMessage?: string;
     }) => {
       const workspace = new Workspace(resolveWorkspace(opts.workspace));
       const changed = /^\d+$/.test(opts.changedFiles)
@@ -1093,6 +1105,11 @@ program
         notes: opts.notes?.slice(0, 400),
         outputId,
         outputAvailable,
+        nativeThreadId: opts.nativeThread,
+        nativeResultReference:
+          opts.nativeResultTurn || opts.nativeResultMessage
+            ? { turnId: opts.nativeResultTurn, messageId: opts.nativeResultMessage }
+            : undefined,
       });
       if (outputId !== undefined && !outputAvailable) check("已记录执行摘要（输出未对 ChatGPT 开放）");
       else if (outputId !== undefined) check("已记录执行摘要与输出");

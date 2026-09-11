@@ -18,6 +18,13 @@ export interface ExecutionRecord {
   /** Present when Codex recorded a sanitized command output for this iteration. */
   outputId?: number;
   outputAvailable?: boolean;
+  /** Native Codex thread that produced this execution result, when applicable. */
+  nativeThreadId?: string;
+  /** Stable references to the native turn and its final result message. */
+  nativeResultReference?: {
+    turnId?: string;
+    messageId?: string;
+  };
 }
 
 function recordsFile(workspaceId: string): string {
