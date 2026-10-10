@@ -19,6 +19,8 @@ const CANONICAL_TOOL_NAMES = new Set([
   "test_status",
   "execution_summary",
   "execution_output",
+  "trusted_human_decision",
+  "controlled_write_patch",
 ]);
 
 export function normalizeConnectorToolName(name: unknown): unknown {

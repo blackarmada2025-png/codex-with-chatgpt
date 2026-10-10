@@ -14,9 +14,11 @@ import type { TunnelProvider } from "../tunnel/provider.js";
 import { namedTunnelBinding, readTunnelState } from "../tunnel/state.js";
 import { Logger, nullLogger } from "../logger/index.js";
 import { DEFAULT_HOST, DEFAULT_PORT } from "../config/paths.js";
+import { getCodexHome } from "../config/sandbox-allow.js";
 import { SERVICE_NAME, VERSION } from "../version.js";
 import { writeRuntimeState, clearRuntimeState, type RuntimeState } from "./runtime.js";
 import { GatewayWorkspaceRegistry, type GatewayWorkspaceEntry } from "../workspace/registry.js";
+import { ProductionBindings } from "../task/production-bindings.js";
 
 function tunnelForWorkspace(workspaceId: string, logger: Logger): TunnelProvider {
   const binding = namedTunnelBinding(readTunnelState(workspaceId));
@@ -41,6 +43,8 @@ export interface BridgeOptions {
   /** Persist runtime state file (disable in tests). */
   persistRuntime?: boolean;
   authStoreFile?: string;
+  /** Trusted local Codex state root used by execution receipt readback. */
+  codexHome?: string;
   pairingTtlMs?: number;
   accessTokenTtlMs?: number;
   /**
@@ -48,6 +52,8 @@ export interface BridgeOptions {
    * the OAuth/tunnel identity; MCP tools must select one of these roots.
    */
   gatewayWorkspaceEntries?: GatewayWorkspaceEntry[];
+  /** Exact OAuth client identity for the two governed production mutation tools. */
+  trustedHumanDecisionClientId?: string;
 }
 
 export interface Bridge {
@@ -105,6 +111,10 @@ export async function startBridge(opts: BridgeOptions): Promise<Bridge> {
   }
 
   const authStore = new AuthStore(workspace.id, { file: opts.authStoreFile });
+  const trustedHumanDecisionClientId = opts.trustedHumanDecisionClientId ?? process.env.C2C_TRUSTED_HUMAN_DECISION_CLIENT_ID;
+  const productionBindings = trustedHumanDecisionClientId
+    ? new ProductionBindings({ workspace, trustedHumanClientId: trustedHumanDecisionClientId })
+    : undefined;
   const pairing = new PairingManager(workspace.id, { ttlMs: opts.pairingTtlMs });
   const tunnel = opts.tunnelProvider ?? tunnelForWorkspace(workspace.id, logger);
   const adminToken = `c2c_admin_${randomBytes(24).toString("base64url")}`;
@@ -143,7 +153,7 @@ export async function startBridge(opts: BridgeOptions): Promise<Bridge> {
   // ---- MCP endpoint (bearer-protected) --------------------------------------
 
   const mcpHandler = createMcpHttpHandler(
-    () => createMcpServer({ workspace, logger, gatewayRegistry }),
+    () => createMcpServer({ workspace, logger, gatewayRegistry, productionBindings, codexHome: opts.codexHome ?? getCodexHome() }),
     logger,
     { connectorToolNameCompatibility: Boolean(gatewayRegistry) }
   );

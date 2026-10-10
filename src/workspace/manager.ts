@@ -313,6 +313,24 @@ export class Workspace {
     };
   }
 
+  /**
+   * Read canonical workspace bytes without text decoding or line normalization.
+   * This remains an internal Workspace API; it is intentionally not MCP-registered.
+   */
+  async readFileBytes(requested: string): Promise<Buffer> {
+    const { abs, rel } = this.resolve(requested);
+    let stat: fs.Stats;
+    try {
+      stat = await fs.promises.stat(abs);
+    } catch {
+      throw new WorkspaceError("FILE_NOT_FOUND", `File not found: ${rel}`);
+    }
+    if (!stat.isFile()) {
+      throw new WorkspaceError("NOT_A_FILE", `Not a regular file: ${rel}`);
+    }
+    return fs.promises.readFile(abs);
+  }
+
   async listDirectory(
     requested: string,
     opts: { depth?: number; limit?: number; offset?: number } = {}
