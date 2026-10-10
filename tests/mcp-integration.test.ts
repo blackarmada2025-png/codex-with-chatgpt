@@ -56,10 +56,13 @@ afterAll(async () => {
 });
 
 describe("MCP tools over Streamable HTTP", () => {
-  it("lists all nine read-only tools", async () => {
+  it("lists the current canonical tool surface", async () => {
     const { tools } = await client.listTools();
     const names = tools.map((tool) => tool.name).sort();
     expect(names).toEqual([
+      "controlled_write_patch",
+      "conversation_resume",
+      "decision_request_create",
       "execution_output",
       "execution_summary",
       "git_diff",
@@ -68,6 +71,8 @@ describe("MCP tools over Streamable HTTP", () => {
       "read_file",
       "search_workspace",
       "test_status",
+      "trusted_human_decision",
+      "visual_edit_execute",
       "workspace_info",
     ]);
     // no write tools in V1
@@ -78,12 +83,35 @@ describe("MCP tools over Streamable HTTP", () => {
 
   it("workspace_info returns identity and project detection", async () => {
     const result = await client.callTool({ name: "workspace_info", arguments: {} });
-    const info = jsonOf<{ workspaceId: string; projectType: string; frameworks: string[]; git: { isRepo: boolean; branch: string } }>(result);
+    const info = jsonOf<{
+      workspaceId: string;
+      projectType: string;
+      frameworks: string[];
+      git: { isRepo: boolean; branch: string };
+      caller_identity: {
+        caller_fingerprint: string;
+        caller_registered: boolean;
+        trusted_principal_id: string | null;
+        trusted_fingerprint: string | null;
+        trusted_match: boolean;
+        authority_status: string;
+      };
+    }>(result);
     expect(info.workspaceId).toBe(bridge.workspace.id);
     expect(info.projectType).toBe("node");
     expect(info.frameworks).toContain("React");
     expect(info.git.isRepo).toBe(true);
     expect(info.git.branch).toBe("main");
+    expect(info.caller_identity.caller_fingerprint).toMatch(/^[A-F0-9]{64}$/);
+    expect(info.caller_identity.caller_registered).toBe(false);
+    expect(info.caller_identity.trusted_match).toBe(false);
+    if (info.caller_identity.trusted_principal_id === null) {
+      expect(info.caller_identity.trusted_fingerprint).toBeNull();
+      expect(info.caller_identity.authority_status).toBe("NO_TRUSTED_PRINCIPAL");
+    } else {
+      expect(info.caller_identity.trusted_fingerprint).toMatch(/^[A-F0-9]{64}$/);
+      expect(info.caller_identity.authority_status).toBe("CALLER_UNREGISTERED");
+    }
   });
 
   it("read_file returns hello.txt", async () => {
