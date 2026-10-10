@@ -327,9 +327,15 @@ export class AuthStore {
   }
 }
 
+export const DEFAULT_SCOPES: readonly Scope[] = ["workspace.read"];
+
 export function filterScopes(requested: string | undefined): string[] {
-  if (!requested || requested.trim() === "") return [...SUPPORTED_SCOPES];
-  const asked = requested.split(/[\s+]+/).filter(Boolean);
+  // Legacy clients that omit scope receive the smallest read-only grant.
+  if (requested === undefined || requested.trim() === "") return [...DEFAULT_SCOPES];
+
+  const asked = requested.split(/[\\s+]+/).filter(Boolean);
   const granted = asked.filter((scope) => (SUPPORTED_SCOPES as readonly string[]).includes(scope));
-  return granted.length > 0 ? granted : [...SUPPORTED_SCOPES];
+  // Unknown-only requests receive no permissions; mixed requests are safely
+  // reduced to the explicitly known scopes and are never expanded.
+  return granted;
 }
