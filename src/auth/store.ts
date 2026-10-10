@@ -333,7 +333,7 @@ export function filterScopes(requested: string | undefined): string[] {
   // Legacy clients that omit scope receive the smallest read-only grant.
   if (requested === undefined || requested.trim() === "") return [...DEFAULT_SCOPES];
 
-  const asked = requested.split(/[\\s+]+/).filter(Boolean);
+  const asked = requested.split(/[\s+]+/).filter(Boolean);
   const granted = asked.filter((scope) => (SUPPORTED_SCOPES as readonly string[]).includes(scope));
   // Unknown-only requests receive no permissions; mixed requests are safely
   // reduced to the explicitly known scopes and are never expanded.
